@@ -1,0 +1,37 @@
+secret.txt
+logs/
+.log
+/temp/
+?ogo.png
+/build/logs/
+
+# Игнорировать все .pyc файлы
+*.pyc
+
+# Игнорировать папку с виртуальным окружением
+venv/
+
+# Игнорировать лог-файлы
+*.log
+
+# Игнорировать временные файлы и кэш
+__pycache__/
+*.swp
+
+# Но не игнорировать важный файл внутри venv
+!venv/important.txt
+
+
+# шаблон который отрезает всё ненужное
+.idea/
+.vscode/
+.venv/
+.DS_Store
+/venv/
+__pycache__/
+*.db
+*.xlsx
+*.log
+*.csv
+.token
+.env

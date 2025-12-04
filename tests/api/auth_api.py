@@ -1,5 +1,6 @@
 import constants as const
 from custom_requester.custom_requester import CustomRequester
+import utils.data_generator as data_gener
 
 class AuthAPI(CustomRequester):
     """
@@ -48,7 +49,4 @@ class AuthAPI(CustomRequester):
 
         token = response["accessToken"]
         self._update_session_headers(**{"authorization": "Bearer " + token})
-
-
-
 
