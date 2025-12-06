@@ -1,8 +1,6 @@
 from http.client import responses
 from unittest import expectedFailure
 
-import pytest
-import requests
 import constants as const
 import utils.data_generator as data_gener
 from custom_requester.custom_requester import CustomRequester
