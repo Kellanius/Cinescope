@@ -10,4 +10,7 @@ from tests.api.api_manager import ApiManager
 #class TestMovieAPI:
     # Класс для тестирования фильмов
 
+    # Авторизуемся под админом (дальше все проверки под админом)
+
+
     #def

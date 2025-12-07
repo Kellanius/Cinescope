@@ -1,5 +1,6 @@
 from tests.api.auth_api import AuthAPI
 from tests.api.user_api import UserAPI
+from tests.api.movies.movies_api import MoviesAPI
 
 class ApiManager:
     """
@@ -13,3 +14,4 @@ class ApiManager:
         self.session = session
         self.auth_api = AuthAPI(session)
         self.user_api = UserAPI(session)
+        self.movies_api = MoviesAPI(session)
