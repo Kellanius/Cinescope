@@ -5,6 +5,7 @@ import constants as const
 import utils.data_generator as data_gener
 from custom_requester.custom_requester import CustomRequester
 from tests.api.api_manager import ApiManager
+from utils.auth_data_builder import AuthDataBuilder
 
 
 class TestAuthAPI:
@@ -25,13 +26,9 @@ class TestAuthAPI:
         """
         Тест на регистрацию и авторизацию пользователя.
         """
-        login_data = {
-            'email': registered_user["email"],
-            "password": registered_user["password"]
-        }
 
         # Вызов метода авторизации через AuthAPI
-        response = api_manager.auth_api.login_user(login_data)
+        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(registered_user))
 
         response_data = response.json()
         assert "accessToken" in response_data, "Токен доступа отсутствует в ответе"
@@ -43,12 +40,7 @@ class TestAuthAPI:
         # Замена пароля на неподходящий (больше 20 символов)
         incorrect_password = data_gener.DataGenerator.generate_negative_random_password_over_max()
 
-        login_data = {
-            'email': registered_user["email"],
-            "password": incorrect_password
-        }
-
-        response = api_manager.auth_api.login_user(login_data, expected_status=401)
+        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(registered_user, password=incorrect_password), expected_status=401)
 
         # Проверка
         assert response.status_code == 401, "Пользователь авторизован с неверным паролем"
@@ -58,15 +50,10 @@ class TestAuthAPI:
         # Авторизация с несуществующим email
 
         # Замена email на несуществующий
-        incorrect_password_email = data_gener.DataGenerator.generate_non_existent_random_email()
-
-        login_data = {
-            'email': incorrect_password_email,
-            "password": registered_user["password"]
-        }
+        incorrect_email = data_gener.DataGenerator.generate_non_existent_random_email()
 
         # Отправка запроса на авторизацию
-        response = api_manager.auth_api.login_user(login_data, expected_status=401)
+        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(registered_user, email=incorrect_email), expected_status=401)
 
         # Проверка
         assert response.status_code == 401, "Пользователь авторизован с неверным email"
@@ -74,10 +61,7 @@ class TestAuthAPI:
 
     def test_auth_user_without_data(self, test_user, api_manager, registered_user):
         # Авторизация с пустым телом запроса
-
-        login_data = {}
-
-        response = api_manager.auth_api.login_user(login_data, expected_status=401)
+        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(), expected_status=401)
 
         # Проверка
         assert response.status_code == 401, "Авторизация прошла без данных"

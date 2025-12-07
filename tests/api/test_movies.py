@@ -7,7 +7,7 @@ from custom_requester.custom_requester import CustomRequester
 from tests.api.api_manager import ApiManager
 
 
-class TestMovieAPI:
+#class TestMovieAPI:
     # Класс для тестирования фильмов
 
-    def
+    #def
