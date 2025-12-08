@@ -10,3 +10,14 @@ HEADERS = {
 LOGIN_ENDPOINT = "/login"
 REGISTER_ENDPOINT = "/register"
 MOVIES_ENDPOINT = "/movies"
+
+# Значения по умолчанию для фильтра фильмов из документации
+default_params_for_afisha_filter = {
+    "pageSize": 10,
+    "page": 1,
+    "minPrice": 1,
+    "maxPrice": 1000,
+    "published": True,
+    "genreId": 1,
+    "createdAt": "asc"
+}

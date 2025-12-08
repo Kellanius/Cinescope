@@ -39,8 +39,8 @@ class AuthAPI(CustomRequester):
 
     def authenticate(self, user_creds):
         login_data = {
-            "email": user_creds[0],
-            "password": user_creds[1]
+            "email": user_creds["email"],
+            "password": user_creds["password"]
         }
 
         response = self.login_user(login_data).json()

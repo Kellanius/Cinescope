@@ -17,20 +17,9 @@ class MoviesAPI(CustomRequester):
         :param kwargs: возможные параметры для фильтрации фильмов
         """
 
-        # Значения по умолчанию из документации
-        default_params = {
-            "pageSize": 10,
-            "page": 1,
-            "minPrice": 1,
-            "maxPrice": 1000,
-            "published": True,
-            "genreId": 1,
-            "createdAt": "asc"
-        }
-
         # Объединяем дефолтные и переданные параметры
         # Переданные параметры перезаписывают дефолтные
-        params = {**default_params, **kwargs}
+        params = {**const.default_params_for_afisha_filter, **kwargs}
 
         return self.send_request(
             method="GET",

@@ -69,3 +69,19 @@ class DataGenerator:
         random.shuffle(password)
 
         return ''.join(password)
+
+    # Генератор рандомных параметров для фильтра с фильмами
+    @staticmethod
+    def generate_random_data_for_afisha_filter():
+
+        random_data_for_afisha_filter = {
+            "pageSize": random.randint(1, 10),
+            "page": 1,
+            "minPrice": random.randint(1, 500),
+            "maxPrice": random.randint(100, 5000),
+            "published": True,
+            "genreId": 1,
+            "createdAt": "asc"
+        }
+
+        return random_data_for_afisha_filter

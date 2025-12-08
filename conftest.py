@@ -90,16 +90,16 @@ def user_session(base_session, test_user):
     auth_api = AuthAPI(base_session)
 
     # Регистрирую пользователя
-    response = auth_api.register_user(test_user, expected_status=201)
+    response_register = auth_api.register_user(test_user, expected_status=201)
 
     # Получаю данные авторизации нового пользователя
     login_data = AuthDataBuilder.create_login_data(test_user)
 
     # Авторизуюсь под новым пользователем
-    response = auth_api.login_user(login_data, expected_status=200)
+    response_auth = auth_api.login_user(login_data, expected_status=200)
 
     # Достаю токен пользователя
-    token = response.json()["accessToken"]
+    token = response_auth.json()["accessToken"]
 
     # Добавляю токен в сессию
     auth_api._update_session_headers(authorization=f"Bearer {token}")
