@@ -10,7 +10,7 @@ class MoviesAPI(CustomRequester):
         super().__init__(session=session, base_url = const.MOVIES_URL)
 
 
-    def get_movies_info(self, expected_status=200, **kwargs):
+    def get_afisha_info(self, expected_status=200, **kwargs):
         """
         Получение афиш фильмов
         :param expected_status: Ожидаемый статус-код
@@ -28,3 +28,29 @@ class MoviesAPI(CustomRequester):
             expected_status=expected_status
         )
 
+    def get_movie_info(self, movie_id, expected_status=200):
+        """
+        :param movie_id: айди фильма
+        :return: информация о фильме
+        """
+
+        return self.send_request(
+            method="GET",
+            endpoint=f"{const.MOVIES_ENDPOINT}/{movie_id}",
+            expected_status=expected_status
+        )
+
+
+    def create_new_movies(self, data_for_new_movies, expected_status=201):
+        """
+        Создание нового фильма
+        :param expected_status: Ожидаемый статус-код
+        :param data_for_new_movies: параметры для создания фильма
+        """
+
+        return self.send_request(
+            method="POST",
+            endpoint=const.MOVIES_ENDPOINT,
+            data=data_for_new_movies,
+            expected_status=expected_status
+        )

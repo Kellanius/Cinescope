@@ -10,7 +10,7 @@ class UserAPI(CustomRequester):
     def __init__(self, session):
         super().__init__(
             session = session,
-            base_url = const.BASE_URL_USER
+            base_url = const.BASE_URL
         )
 
 
@@ -22,7 +22,7 @@ class UserAPI(CustomRequester):
         """
         return self.send_request(
             method="GET",
-            endpoint=f"/user/{user_id}",
+            endpoint=f"{const.USER_ENDPOINT}/{user_id}",
             expected_status=expected_status
         )
 
@@ -35,6 +35,6 @@ class UserAPI(CustomRequester):
 
         return self.send_request(
             method="DELETE",
-            endpoint=f"/users/{user_id}",
+            endpoint=f"{const.USER_ENDPOINT}/{user_id}",
             expected_status=expected_status
         )

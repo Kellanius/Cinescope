@@ -63,65 +63,67 @@ def api_manager(session):
 
 
 #############################################
-                #Мои сессии
+#Мои сессии (в итоге не используются,
+#т.к. после их создания я внезапно полностью понял работу сессий
+# и осознал, зачем нужен API_Manager + перестал путаться в связях и уровнях абстракции вокруг сессий
 #############################################
-
+"""
 # Базовая сессия (без авторизации)
 @pytest.fixture(scope="session")
 def base_session():
-    # Создание сессии
-    session = requests.Session()
+# Создание сессии
+session = requests.Session()
 
-    # Добавление заголовков в сессию
-    session.headers.update(HEADERS)
+# Добавление заголовков в сессию
+session.headers.update(HEADERS)
 
-    # Возвращение сессии
-    return session
+# Возвращение сессии
+return session
 
 
 
 # Сессия обычного пользователя
 @pytest.fixture(scope="session")
 def user_session(base_session, test_user):
-    """
-    Создает/регистрирует пользователя и возвращает сессию с его токеном.
-    """
-    # Создаю экземпляр для работы с авторизацией на основе базовой сессии
-    auth_api = AuthAPI(base_session)
+"""
+#Создает/регистрирует пользователя и возвращает сессию с его токеном.
+"""
+# Создаю экземпляр для работы с авторизацией на основе базовой сессии
+auth_api = AuthAPI(base_session)
 
-    # Регистрирую пользователя
-    response_register = auth_api.register_user(test_user, expected_status=201)
+# Регистрирую пользователя
+response_register = auth_api.register_user(test_user, expected_status=201)
 
-    # Получаю данные авторизации нового пользователя
-    login_data = AuthDataBuilder.create_login_data(test_user)
+# Получаю данные авторизации нового пользователя
+login_data = AuthDataBuilder.create_login_data(test_user)
 
-    # Авторизуюсь под новым пользователем
-    response_auth = auth_api.login_user(login_data, expected_status=200)
+# Авторизуюсь под новым пользователем
+response_auth = auth_api.login_user(login_data, expected_status=200)
 
-    # Достаю токен пользователя
-    token = response_auth.json()["accessToken"]
+# Достаю токен пользователя
+token = response_auth.json()["accessToken"]
 
-    # Добавляю токен в сессию
-    auth_api._update_session_headers(authorization=f"Bearer {token}")
+# Добавляю токен в сессию
+auth_api._update_session_headers(authorization=f"Bearer {token}")
 
-    # Возвращает сессию с токеном обычного пользователя
-    return base_session
+# Возвращает сессию с токеном обычного пользователя
+return base_session
 
 
 # Сессия админа
 @pytest.fixture(scope="session")
 def admin_session(base_session):
-    """
-    Возвращает сессию с токеном админа.
-    """
-    # Создаю экземпляр для работы с авторизацией на основе базовой сессии
-    auth_api = AuthAPI(base_session)
+"""
+#Возвращает сессию с токеном админа.
+"""
+# Создаю экземпляр для работы с авторизацией на основе базовой сессии
+auth_api = AuthAPI(base_session)
 
-    # Авторизуюсь под админом и сохраняю токен в сессию base_session
-    auth_api.authenticate((
-        secrets.ADMIN_AUTH_DATA["email"],
-        secrets.ADMIN_AUTH_DATA["password"]
-    ))
+# Авторизуюсь под админом и сохраняю токен в сессию base_session
+auth_api.authenticate((
+    secrets.ADMIN_AUTH_DATA["email"],
+    secrets.ADMIN_AUTH_DATA["password"]
+))
 
-    # Возвращаю base_session с админским токеном
-    return base_session
+# Возвращаю base_session с админским токеном
+return base_session"""

@@ -48,11 +48,11 @@ class DataGenerator:
     @staticmethod
     def generate_negative_random_password_over_max():
         """
-        Генерация пароля, соответствующего требованиям:
+        Генерация пароля, не соответствующего требованиям:
         - Минимум 1 буква.
         - Минимум 1 цифра.
         - Допустимые символы.
-        - Длина от 8 до 20 символов.
+        - Длина от 19 до 30 символов.
         """
         # Гарантируем наличие хотя бы одной буквы и одной цифры
         letters = random.choice(string.ascii_letters)  # Одна буква
@@ -85,3 +85,87 @@ class DataGenerator:
         }
 
         return random_data_for_afisha_filter
+
+    # Генератор рандомного названия и описания для фильма
+    @staticmethod
+    def generate_random_name_for_movies(max_spaces = 10):
+        """
+        Генерация названия, соответствующего требованиям:
+        - Минимум 1 буква.
+        - Минимум 1 цифра.
+        - Допустимые символы.
+        - Длина от 3 до 60 символов.
+        - До 10 рандомных пробелов между символами
+        :param max_spaces: максимальное количество пробелов (по умолчанию 10)
+        """
+        # Гарантируем наличие хотя бы одной буквы и одной цифры
+        letters = random.choice(string.ascii_letters)  # Одна буква
+        digits = random.choice(string.digits)  # Одна цифра
+
+        # Дополняем название случайными символами из допустимого набора
+        special_chars = "?:"
+        all_chars = string.ascii_letters + string.digits + special_chars
+
+        # уменьшение remaining_length чтобы учесть пробелы
+        remaining_length = random.randint(1, max(1, 58 - max_spaces))  # Остальная длина названия. max - чтобы не было отрицательного значения
+        remaining_chars = ''.join(random.choices(all_chars, k=remaining_length))
+
+        # Собираем название без пробелов
+        movie_name = list(letters + digits + remaining_chars)
+        random.shuffle(movie_name)
+
+        # Добавляем пробелы между символами (не в начале и не в конце)
+        if len(movie_name) > 1:
+            # Определяем, сколько пробелов добавить (от 0 до max_spaces или длины названия минус 1, если оно меньше max_spaces)
+            num_spaces = random.randint(0, min(max_spaces, len(movie_name)-1))
+
+            # Выбираем случайные позиции для пробелов (кроме последней позиции)
+            space_positions = sorted(random.sample(range(1, len(movie_name)), num_spaces), reverse=True)
+
+            # Вставляем пробелы с конца, чтобы позиции не сдвигались
+            for pos in space_positions:
+                movie_name.insert(pos, " ")
+
+        # Возвращаем название/описание фильма
+        return ''.join(movie_name)
+
+
+    # Генератор рандомных параметров создания фильма
+    @staticmethod
+    def generate_random_data_for_new_movies():
+
+        random_movie_name = DataGenerator.generate_random_name_for_movies()
+        random_movie_description = DataGenerator.generate_random_name_for_movies()
+
+        location = ["SPB", "MSK"]
+
+        random_data_for_new_movies = {
+            "name": random_movie_name,
+            "imageUrl": f"https://image.url",
+            "price": random.randint(1, 5000),
+            "description": random_movie_description,
+            "location": random.choice(location),
+            "published": True,
+            "genreId": 1
+        }
+
+        return random_data_for_new_movies
+
+
+        ##################################################################################################
+        # Оказалось что imageUrl это url изображения (шок), а не url фильма, поэтому данный генератор не нужен
+        """# Генератор рандомного URL для фильма
+        @staticmethod
+        def generate_url_for_movies(movie_name):
+            """
+        # Генерация url. Принимает имя фильма и делает из него url без пробелов и спец символов
+        #:param movie_name: имя фильма
+        """
+            # Проверка всех символов на наличие пробелов и замена их на "_"
+            url = movie_name.replace(" ","_")
+            url = url.replace("?","")
+            url = url.replace(":", "")
+
+            # Возвращаем корректный url фильма
+            return url"""
+    ##################################################################################################

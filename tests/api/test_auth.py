@@ -6,6 +6,7 @@ import utils.data_generator as data_gener
 from custom_requester.custom_requester import CustomRequester
 from tests.api.api_manager import ApiManager
 from utils.auth_data_builder import AuthDataBuilder
+import secrets
 
 
 class TestAuthAPI:
@@ -22,6 +23,7 @@ class TestAuthAPI:
         assert "USER" in response_data["roles"], "Роль USER должна быть у пользователя"
 
 
+
     def test_register_and_login_user(self, api_manager, registered_user):
         """
         Тест на регистрацию и авторизацию пользователя.
@@ -33,6 +35,7 @@ class TestAuthAPI:
         response_data = response.json()
         assert "accessToken" in response_data, "Токен доступа отсутствует в ответе"
         assert response_data["user"]["email"] == registered_user["email"], "Email не совпадает"
+
 
 
     def test_incorrect_password_auth_user(self, api_manager, test_user, registered_user):
