@@ -10,6 +10,10 @@ class MoviesAPI(CustomRequester):
     def __init__(self, session):
         super().__init__(session=session, base_url = const.MOVIES_URL)
 
+    ############################################################
+            # БАЗОВЫЕ ФУНКЦИИ (ДЛЯ ПОЗИТИВНЫХ ПРОВЕРОК)
+    ############################################################
+
 
     def get_afisha_info(self, expected_status=200, **kwargs):
         """
@@ -56,29 +60,20 @@ class MoviesAPI(CustomRequester):
             expected_status=expected_status
         )
 
-    def change_movie_info(self, movie_id, movie_data, expected_status=200):
+    def patch_movie_info(self, movie_id, new_movie_data_for_patch, expected_status=200):
         """
         Создание нового фильма
         :param movie_id: id редактируемого фильма
-        :param movie_data: текущие данные фильма (нужны для того, чтобы заменить локацию)
+        :param new_movie_data_for_patch: данные для изменения
         :param expected_status: Ожидаемый статус-код
         :return: post запрос о редактировании фильма
         """
-
-        # Генерируем новые данные на которые будем заменять старые
-        new_movie_data_for_change = DataGenerator.generate_random_data_for_new_movies()
-
-        # Заменяем в новых данных "location" на отличное от текущего "location", чтобы проверить изменение этого параметра
-        if movie_data["location"] == "SPB":
-            new_movie_data_for_change["location"] = "MSK"
-        else:
-            new_movie_data_for_change["location"] = "SPB"
 
         # Отправляем PATCH запрос на изменение данных у фильма на новые и возвращаем ответ
         return self.send_request(
             method="PATCH",
             endpoint=f"{const.MOVIES_ENDPOINT}/{movie_id}",
-            data=new_movie_data_for_change,
+            data=new_movie_data_for_patch,
             expected_status=expected_status
         )
 

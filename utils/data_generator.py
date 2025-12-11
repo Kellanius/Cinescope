@@ -72,19 +72,39 @@ class DataGenerator:
 
     # Генератор рандомных параметров для фильтра с фильмами
     @staticmethod
-    def generate_random_data_for_afisha_filter():
+    def generate_random_data_for_afisha_filter(correct_data=True, **kwargs):
+        """
+        :param correct_data: True - данные будут корректными, False - некорректными
+        :param kwargs: вручную вносимые данные, которые заменят сгенерированные
+        :return: сгенерированные данные для афиша фильтров
+        """
+        if correct_data is True:
+            random_data_for_afisha_filter = {
+                "pageSize": random.randint(1, 10),
+                "page": 1,
+                "minPrice": random.randint(1, 500),
+                "maxPrice": random.randint(100, 5000),
+                "published": True,
+                "genreId": 1,
+                "createdAt": "asc"
+            }
 
-        random_data_for_afisha_filter = {
-            "pageSize": random.randint(1, 10),
-            "page": 1,
-            "minPrice": random.randint(1, 500),
-            "maxPrice": random.randint(100, 5000),
-            "published": True,
-            "genreId": 1,
-            "createdAt": "asc"
-        }
+        # Если correct_data=False, то генерируем maxPrice меньше чем minPrice
+        else:
+            random_data_for_afisha_filter = {
+                "pageSize": random.randint(1, 10),
+                "page": 1,
+                "minPrice": random.randint(501, 5000),
+                "maxPrice": random.randint(1, 500),
+                "published": True,
+                "genreId": 1,
+                "createdAt": "asc"
+            }
+
+        random_data_for_afisha_filter.update(kwargs)
 
         return random_data_for_afisha_filter
+
 
     # Генератор рандомного названия и описания для фильма
     @staticmethod
@@ -132,7 +152,11 @@ class DataGenerator:
 
     # Генератор рандомных параметров создания фильма
     @staticmethod
-    def generate_random_data_for_new_movies():
+    def generate_random_data_for_new_movies(**kwargs):
+        """
+        :param kwargs: любые параметры, которые можно вписать вручную для замены рандомно сгенерированных
+        :return: сгенерированные данные для фильма
+        """
 
         random_movie_name = DataGenerator.generate_random_name_for_movies()
         random_movie_description = DataGenerator.generate_random_name_for_movies()
@@ -149,7 +173,37 @@ class DataGenerator:
             "genreId": 1
         }
 
+        random_data_for_new_movies.update(kwargs)
+
         return random_data_for_new_movies
+
+
+    # Генератор для изменения данных в фильме
+    @staticmethod
+    def generate_random_data_for_patch_movies_info(movie_data):
+        """
+        :param movie_data: Данные фильма, которые будем менять
+        :return: новые данные фильма
+        """
+        # Генерируем новые данные на которые будем заменять старые
+        new_movie_data_for_patch = DataGenerator.generate_random_data_for_new_movies()
+
+        # Заменяем в новых данных "location" на отличное от текущего "location", чтобы проверить изменение этого параметра
+        if movie_data["location"] == "SPB":
+            new_movie_data_for_patch["location"] = "MSK"
+        else:
+            new_movie_data_for_patch["location"] = "SPB"
+
+        return new_movie_data_for_patch
+
+
+    @staticmethod
+    # генератор рандомного id фильма
+    def generate_random_id():
+        return f"{random.randint(1000000, 2000000)}"
+
+
+
 
 
         ##################################################################################################
