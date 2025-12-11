@@ -1,4 +1,5 @@
 import constants as const
+from conftest import api_manager
 from utils.data_generator import DataGenerator
 from custom_requester.custom_requester import CustomRequester
 from tests.api.api_manager import ApiManager
@@ -72,9 +73,11 @@ class TestMovieAPI:
         assert random_data_for_afisha_filter["minPrice"] <= MoviePriceAnalyzer.get_min_price(response_data), "В афишу попали фильмы с ценой меньше, чем указано в фильтре"
 
     #####################################
-            # Создание фильма
+    # Создание/изменение/удаление фильма
     #####################################
-    def test_create_new_movie(self, api_manager):
+    def test_create_edit_delete_movie(self, api_manager):
+        #### Создание фильма ####
+
         # Генерируем рандомные данные для фильма
         random_data_for_new_movies = DataGenerator.generate_random_data_for_new_movies()
 
@@ -95,3 +98,30 @@ class TestMovieAPI:
         CustomAssertions.assert_equals(random_data_for_new_movies["price"], response_get_movie_info_data["price"])  # проверяем цену фильма
         CustomAssertions.assert_equals(random_data_for_new_movies["description"], response_get_movie_info_data["description"])  # проверяем описание фильма
         CustomAssertions.assert_equals(random_data_for_new_movies["location"], response_get_movie_info_data["location"])  # проверяем локацию фильма
+
+
+        #### Изменение фильма ####
+
+        # Меняем данные фильма по его id. Указываем в функции текущие данные для изменения location на другое
+        response_change_movie_info = api_manager.movies_api.change_movie_info(response_create_movie_data["id"], response_get_movie_info_data)
+
+        # Переводим ответ об изменении данных о фильме в json формат
+        response_change_movie_info_data = response_change_movie_info.json()
+
+        # Сравниваем инфу из полученного ответа со старой информацией о фильме
+        CustomAssertions.assert_non_equals(response_change_movie_info_data["name"], response_get_movie_info_data["name"]) # проверяем что название изменилось
+        CustomAssertions.assert_non_equals(response_change_movie_info_data["price"], response_get_movie_info_data["price"])  # проверяем что цена изменилось
+        CustomAssertions.assert_non_equals(response_change_movie_info_data["description"], response_get_movie_info_data["description"])  # проверяем что описание изменилось
+        CustomAssertions.assert_non_equals(response_change_movie_info_data["location"], response_get_movie_info_data["location"])  # проверяем что локация изменилось
+
+
+        #### Удаление фильма ####
+        # Удаляем фильм
+        response_delete_movie = api_manager.movies_api.delete_movie(response_create_movie_data["id"])
+
+        # Переводим ответ об удалении фильма в json формат
+        response_delete_movie_data = response_delete_movie.json()
+
+        # Проверяем, что фильма больше не существует (делаем GET запрос на получение инфы о фильме)
+        response_get_deleted_movie_info = api_manager.movies_api.get_movie_info(response_delete_movie_data["id"], expected_status=404)
+
