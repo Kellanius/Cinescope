@@ -2,16 +2,50 @@
 
 # Модуль для упрощения и сокращения ассертов
 class CustomAssertions:
+
+    # Проверка того, что сравниваемые данные равны
     @staticmethod
-    def assert_equals(expectation, actual, message = None):
-        if message is None:
-            message = f"Ожидалось {expectation}, фактически {actual}"
+    def assert_equals(expectation, actual, *args, message = None):
+        """
+        :param expectation: ожидаемый результат
+        :param actual: фактический результат
+        :param message: сообщение при несовпадении результатов
+        :param kwargs: данные для сравнения разных ключей в одинаковых словарях
+        :return:
+        """
+        # Мы можем вставить в функцию 2 словаря для сравнения (expectation, actual) и затем различные ключи этих словарей (*args).
+        # Тогда все пары ключей будут сравниваться
+        # Это позволит сократить количество строк кода для проверок с 2+ до 1,
+        # когда надо сравнивать много параметров в двух словарях
 
-        assert expectation == actual, message
+        # если args нет, то сравниваем как обычно
+        if args is None:
+            if message is None:
+                message = f"Ожидалось {expectation}, фактически {actual}"
+            assert expectation == actual, message
 
+        # если args есть, то сравниваем ключи двух словарей
+        else:
+            for i in args:
+                if message is None:
+                    message = f"Ожидалось {expectation}, фактически {actual}"
+                assert expectation[i] == actual[i], message
+
+
+    # Проверка того, что сравниваемые данные не равны
     @staticmethod
-    def assert_non_equals(expectation, actual, message = None):
-        if message is None:
-            message = f"Ожидалось что {expectation} не совпадает с фактическим {actual}"
+    def assert_non_equals(expectation, actual, *args, message = None):
+        # Тут всё аналогично позитивной проверке (assert_equals), только проверяется, что данные не совпадают
 
-        assert expectation != actual, message
+        if args is None:
+            if message is None:
+                message = f"Ожидалось что {expectation} не совпадает с фактическим {actual}"
+            assert expectation != actual, message
+
+
+        else:
+            for i in args:
+                if message is None:
+                    message = f"Ожидалось что {expectation} не совпадает с фактическим {actual}"
+                assert expectation[i] != actual[i], message
+

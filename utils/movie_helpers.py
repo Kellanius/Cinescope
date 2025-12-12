@@ -1,0 +1,147 @@
+from utils.data_generator import DataGenerator
+import constants as const
+
+
+
+class MovieHelper:
+
+    # Получение афиши и перевод ответа в json формат
+    @staticmethod
+    def get_afisha(api_manager, data="default", correct_data=True, expected_status = 200, **kwargs):
+        """
+        :param api_manager: сессия
+        :param data: может принимать только 3 значения:
+        "default" - дефолтные данные фильтра
+        "random" - генерирует рандомные корректные данные
+        data=словарь с данными - принимает словарь с данными фильтров для афиши
+        :param correct_data: True - рандомные данные генерируются корректными, False - данные генерируются некорректными
+        :param kwargs:
+        :return: афиша в json формате
+        """
+
+        # По-умолчанию при использовании данного метода выводится афиша с дефолтными фильтрами
+        if data == "default":
+            params = const.default_params_for_afisha_filter.copy()
+
+        # Если data="random", то выводится афиша с рандомными фильтрами
+        elif data == "random":
+
+            random_params = DataGenerator.generate_random_data_for_afisha_filter(correct_data=correct_data)
+
+            # Обновляем параметры данными введенными вручную
+            random_params.update(kwargs)
+
+            # Запрос на получение афиши
+            response = api_manager.movies_api.get_afisha_info(**random_params, expected_status=expected_status)
+
+            # Кроме самой афиши возвращает ещё и рандомные параметры
+            return response.json(), random_params
+
+
+        # Если data это словарь, то выводится афиша с вставленными в словарь данными
+        elif isinstance(data, dict):
+            params = data
+
+        # Если data это непонятно что, то выводится ошибка
+        else:
+            raise ValueError(f'{data} должно иметь значение "default", "random" или словарь')
+
+
+        # Обновляем параметры данными введенными вручную
+        params.update(kwargs)
+
+        # Запрос на получение афиши
+        response = api_manager.movies_api.get_afisha_info(**params, expected_status=expected_status)
+
+        return response.json()
+
+
+
+
+    # Генерация, создание фильма и перевод данных в json формат
+    @staticmethod
+    def generate_data_and_create_movie(api_manager, expected_status = 201, **kwargs):
+        """
+        :param api_manager: сессия
+        :param expected_status: ожидаемый статус-код ответа
+        :param kwargs: параметры для замены сгенерированных данных на желаемые
+        :return: response_get_movie_info_data - данные о фильме возвращенные по api, random_data_for_new_movie - сгенерированные данные о фильме
+        """
+        # Генерация рандомных данных для фильма
+        random_data_for_new_movie = DataGenerator.generate_random_data_for_new_movies(**kwargs)
+
+        # Запрос на создание фильма с рандомными данными
+        response_create_movie = api_manager.movies_api.create_new_movies(random_data_for_new_movie, expected_status=expected_status)
+
+        # Перевод данных ответа о создании фильма в json формат
+        response_create_movie_data = response_create_movie.json()
+
+        return response_create_movie_data, random_data_for_new_movie
+
+
+    # Проверка, что фильм создан с данными параметрами
+    @staticmethod
+    def get_movie_info(api_manager, movie_id, expected_status=200):
+        """
+        :param api_manager: сессия
+        :param movie_id: id фильма
+        :param expected_status: ожидаемый статус ответа
+        :return:
+        """
+
+        # Проверка, что фильм создан с данными параметрами
+        response_get_movie_info = api_manager.movies_api.get_movie_info(movie_id, expected_status=expected_status)
+
+        # Перевод данных ответа с информацией о фильме в json формат
+        response_get_movie_info_data = response_get_movie_info.json()
+
+        return response_get_movie_info_data
+
+
+
+    # Генерация новых данных и замена старых данных на новые
+    @staticmethod
+    def generate_data_and_patch_movie(api_manager, response_get_movie_info_data, expected_status=200, **kwargs):
+        """
+        :param api_manager: сессия
+        :param response_get_movie_info_data: данные фильма, которые собираемся менять
+        :param **kwargs: параметры для изменения сгенерированных данных
+        :return: ответ с сервера об обновлении информации о фильме
+        """
+
+        # Генерация новых данных для замены старых
+        new_movie_data_for_patch = DataGenerator.generate_random_data_for_patch_movies_info(response_get_movie_info_data)
+
+        # обновление сгененированных данных указанными в функции
+        new_movie_data_for_patch.update(kwargs)
+
+        # Замена данных фильма на новые
+        response_patch_movie_info = api_manager.movies_api.patch_movie_info(response_get_movie_info_data["id"], new_movie_data_for_patch, expected_status=expected_status)
+
+        # Перевод ответа об изменении данных о фильме в json формат
+        response_patch_movie_info_data = response_patch_movie_info.json()
+
+        return response_patch_movie_info_data
+
+
+    # Удаление фильма с проверкой
+    @staticmethod
+    def delete_movie_whith_assert(api_manager, movie_id, expected_status=404):
+        """
+        :param api_manager: сессия
+        :param movie_id: id фильма, который собираемся удалить
+        :param expected_status: ожидаемый статус запроса на проверку существования удаленного фильма
+        :return: ответ сервера об удалении фильма
+        """
+
+        #### Удаление фильма ####
+        # Запрос на удаление фильма
+        response_delete_movie = api_manager.movies_api.delete_movie(movie_id)
+
+        # Перевод ответа об удалении фильма в json формат
+        response_delete_movie_data = response_delete_movie.json()
+
+        # Проверка, что фильма больше не существует (GET запрос на получение инфы о фильме)
+        response_get_deleted_movie_info = api_manager.movies_api.get_movie_info(response_delete_movie_data["id"], expected_status=expected_status)
+
+        return response_delete_movie_data

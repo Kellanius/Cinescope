@@ -22,7 +22,7 @@ class MoviesAPI(CustomRequester):
         :param kwargs: возможные параметры для фильтрации фильмов
         """
 
-        # Объединяем дефолтные и переданные параметры
+        # Объединение дефолтных и переданных параметров
         # Переданные параметры перезаписывают дефолтные
         params = {**const.default_params_for_afisha_filter, **kwargs}
 
@@ -69,7 +69,6 @@ class MoviesAPI(CustomRequester):
         :return: post запрос о редактировании фильма
         """
 
-        # Отправляем PATCH запрос на изменение данных у фильма на новые и возвращаем ответ
         return self.send_request(
             method="PATCH",
             endpoint=f"{const.MOVIES_ENDPOINT}/{movie_id}",
