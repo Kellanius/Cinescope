@@ -10,6 +10,7 @@ from custom_requester.custom_requester import CustomRequester
 from tests.api.api_manager import ApiManager
 import secrets
 from utils.auth_data_builder import AuthDataBuilder
+from utils.movie_helpers import MovieHelper
 
 faker = Faker()
 
@@ -60,3 +61,16 @@ def api_manager(session):
     Фикстура для создания экземпляра ApiManager.
     """
     return ApiManager(session)
+
+
+# Фикстура для создания фильма
+@pytest.fixture(scope="function")
+def create_movies(api_manager):
+    # генерация данных и создание фильма
+    movie_data, random_data = MovieHelper.generate_data_and_create_movie(api_manager)
+
+    # возвращает данные созданного фильма
+    yield movie_data
+
+    # удаляет фильм после завершения сессии
+    MovieHelper.delete_movie_with_assert(api_manager, movie_data["id"])
