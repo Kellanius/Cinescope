@@ -65,12 +65,21 @@ def api_manager(session):
 
 # Фикстура для создания фильма
 @pytest.fixture(scope="function")
-def create_movies(api_manager):
+def created_movie(api_manager):
     # генерация данных и создание фильма
-    movie_data, random_data = MovieHelper.generate_data_and_create_movie(api_manager)
+    movie_data, _ = MovieHelper.generate_data_and_create_movie(api_manager)
 
     # возвращает данные созданного фильма
     yield movie_data
 
-    # удаляет фильм после завершения сессии
-    MovieHelper.delete_movie_with_assert(api_manager, movie_data["id"])
+    # удаляет фильм после завершения сессии, если он уже не удалён
+    try:
+        # Проверка, существует ли фильм всё ещё
+        api_manager.movies_api.get_movie_info(movie_data["id"], expected_status=200)
+
+        # Если существует, удаляет его
+        MovieHelper.delete_movie_with_assert(api_manager, movie_data["id"])
+
+    # Если фильм не существует - пропускает
+    except (AssertionError, ValueError):
+        pass

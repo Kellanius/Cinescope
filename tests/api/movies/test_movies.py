@@ -113,7 +113,7 @@ class TestMovieAPI:
     #####################################
             # Создание фильма
     #####################################
-    def test_create_incorrect_movie(self, api_manager):
+    def test_create_incorrect_movie(self, api_manager, created_movie):
 
         #### Создание фильма с некорректными данными ####
 
@@ -138,15 +138,10 @@ class TestMovieAPI:
 
 
         ## Создание фильма с уже существующим именем ##
-        # Генерация рандомных корректных данных для фильма
-        response_create_first_movie_data, random_data_for_first_new_movies = MovieHelper.generate_data_and_create_movie(api_manager)
-
-        # Генерация корректных данных для фильма, но с тем же названием, что у только что созданного фильма. Ожидается ошибка 409
-        response_create_second_movie, random_data_for_second_new_movies = MovieHelper.generate_data_and_create_movie(api_manager, name=f"{random_data_for_first_new_movies['name']}", expected_status=409)
 
 
-        # Удаление первого фильма, чтобы не засорял БД
-        response_get_deleted_movie_info = MovieHelper.delete_movie_with_assert(api_manager, response_create_first_movie_data["id"])
+        # Генерация корректных данных для фильма, но с тем же названием, что у уже созданного фильма (created_movie). Ожидается ошибка 409
+        response_create_second_movie, random_data_for_second_new_movies = MovieHelper.generate_data_and_create_movie(api_manager, name=f"{created_movie['name']}", expected_status=409)
 
 
     #####################################
@@ -156,6 +151,7 @@ class TestMovieAPI:
         ## Получение данных фильма по несуществующему id ##
         response_get_movie_info_with_incorrect_id = api_manager.movies_api.get_movie_info(DataGenerator.generate_random_id(), expected_status=404)
 
+
     #####################################
             # Удаление фильма
     #####################################
@@ -163,34 +159,26 @@ class TestMovieAPI:
         ## Удаление фильма с несуществующим id ##
         response_delete_movie_with_incorrect_id = api_manager.movies_api.delete_movie(DataGenerator.generate_random_id(), expected_status=404)
 
+
+    def test_incorrect_patch_movie(self, api_manager, created_movie):
     #####################################
     # Редактирование информации о фильме
     #####################################
         ## Редактирование фильма некорректными данными ##
 
-        #СОЗДАНИЕ
-
-        # Генерация рандомных данных, создание фильма, получение данных о фильме с сайта (response_get_movie_info_data) и сгенерированных данных (random_data_for_new_movie)
-        response_create_movie_data, random_data_for_new_movie = MovieHelper.generate_data_and_create_movie(api_manager)
-
-        # Проверка, что фильм создан и информация о нём приходит с сайта
-        response_get_movie_info_data = MovieHelper.get_movie_info(api_manager, response_create_movie_data["id"])
-
-
-        # ИЗМЕНЕНИЕ
+        # ИЗМЕНЕНИЕ (фильм уже создан в фикстуре created_movies)
 
         # Редактирование данных на некорректные (минусовый прайс)
         new_incorrect_price = random.randint(-1000, -1)
 
         # Генерация новых данных, замена их старыми, изменение прайса на некорректный, отправка запроса. Ожидается 400 ошибка
-        response_patch_movie_info_data = MovieHelper.generate_data_and_patch_movie(api_manager, response_get_movie_info_data, price=new_incorrect_price, expected_status=400)
+        response_patch_movie_info_data = MovieHelper.generate_data_and_patch_movie(api_manager, created_movie, price=new_incorrect_price, expected_status=400)
 
 
         #### Удаление фильма с проверкой ####
-
-        response_delete_movie_data = MovieHelper.delete_movie_with_assert(api_manager, response_get_movie_info_data["id"], expected_status=404)
+        response_delete_movie_data = MovieHelper.delete_movie_with_assert(api_manager, created_movie["id"], expected_status=404)
 
 
         #### Сразу проверка PATCH в несуществующий айди (после удаления фильма айди остался в response_get_movie_info_data,
         # но отправить изменение по этому айди не получится, т.к. фильма уже нет на сервере. Ожидается 404 ошибка ####
-        response_patch_movie_info_to_non_existent_id = MovieHelper.generate_data_and_patch_movie(api_manager, response_get_movie_info_data, expected_status=404)
+        response_patch_movie_info_to_non_existent_id = MovieHelper.generate_data_and_patch_movie(api_manager, created_movie, expected_status=404)
