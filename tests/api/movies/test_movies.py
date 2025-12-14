@@ -51,9 +51,7 @@ class TestMovieAPI:
         CustomAssertions.assert_equals(const.default_params_for_afisha_filter, response_afisha_data, "pageSize", "page")
 
         # Проверка, что цены фильмов попадают в фильтрационный диапазон.
-        # get_max_price выявляет максимальный, а get_min_price минимальный прайс фильма в афише
-        assert const.default_params_for_afisha_filter["maxPrice"] >= MoviePriceAnalyzer.get_max_price(response_afisha_data), "В афишу попали фильмы с ценой больше, чем указано в фильтре"
-        assert const.default_params_for_afisha_filter["minPrice"] <= MoviePriceAnalyzer.get_min_price(response_afisha_data), "В афишу попали фильмы с ценой меньше, чем указано в фильтре"
+        CustomAssertions.assert_afisha_prices_in_range(const.default_params_for_afisha_filter, response_afisha_data)
 
 
     #### Получение афиш фильмов с рандомными параметрами ####
@@ -66,8 +64,7 @@ class TestMovieAPI:
         CustomAssertions.assert_equals(random_data_for_afisha_filter, response_afisha_data, "pageSize", "page")
 
         # Проверка, что цены фильмов в афише попадают в фильтрационный диапазон рандомно сгенерированных параметров
-        assert random_data_for_afisha_filter["maxPrice"] >= MoviePriceAnalyzer.get_max_price(response_afisha_data), "В афишу попали фильмы с ценой больше, чем указано в фильтре"
-        assert random_data_for_afisha_filter["minPrice"] <= MoviePriceAnalyzer.get_min_price(response_afisha_data), "В афишу попали фильмы с ценой меньше, чем указано в фильтре"
+        CustomAssertions.assert_afisha_prices_in_range(random_data_for_afisha_filter, response_afisha_data)
 
     #####################################
     # Создание/изменение/удаление фильма
@@ -96,7 +93,7 @@ class TestMovieAPI:
 
         #### Удаление фильма с проверкой ####
 
-        response_delete_movie_data = MovieHelper.delete_movie_whith_assert(api_manager, response_get_movie_info_data["id"], expected_status=404)
+        response_delete_movie_data = MovieHelper.delete_movie_with_assert(api_manager, response_get_movie_info_data["id"], expected_status=404)
 
 
     ############################################################
@@ -149,7 +146,7 @@ class TestMovieAPI:
 
 
         # Удаление первого фильма, чтобы не засорял БД
-        response_get_deleted_movie_info = MovieHelper.delete_movie_whith_assert(api_manager, response_create_first_movie_data["id"])
+        response_get_deleted_movie_info = MovieHelper.delete_movie_with_assert(api_manager, response_create_first_movie_data["id"])
 
 
     #####################################
@@ -191,7 +188,7 @@ class TestMovieAPI:
 
         #### Удаление фильма с проверкой ####
 
-        response_delete_movie_data = MovieHelper.delete_movie_whith_assert(api_manager, response_get_movie_info_data["id"], expected_status=404)
+        response_delete_movie_data = MovieHelper.delete_movie_with_assert(api_manager, response_get_movie_info_data["id"], expected_status=404)
 
 
         #### Сразу проверка PATCH в несуществующий айди (после удаления фильма айди остался в response_get_movie_info_data,

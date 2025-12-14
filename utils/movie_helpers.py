@@ -15,7 +15,8 @@ class MovieHelper:
         "random" - генерирует рандомные корректные данные
         data=словарь с данными - принимает словарь с данными фильтров для афиши
         :param correct_data: True - рандомные данные генерируются корректными, False - данные генерируются некорректными
-        :param kwargs:
+        :param expected_status: Ожидаемый статус-код
+        :param kwargs: кастомные параметры для афиши
         :return: афиша в json формате
         """
 
@@ -64,7 +65,7 @@ class MovieHelper:
         """
         :param api_manager: сессия
         :param expected_status: ожидаемый статус-код ответа
-        :param kwargs: параметры для замены сгенерированных данных на желаемые
+        :param kwargs: кастомные параметры для фильма
         :return: response_get_movie_info_data - данные о фильме возвращенные по api, random_data_for_new_movie - сгенерированные данные о фильме
         """
         # Генерация рандомных данных для фильма
@@ -86,7 +87,7 @@ class MovieHelper:
         :param api_manager: сессия
         :param movie_id: id фильма
         :param expected_status: ожидаемый статус ответа
-        :return:
+        :return: данные о фильме в json формате
         """
 
         # Проверка, что фильм создан с данными параметрами
@@ -105,14 +106,15 @@ class MovieHelper:
         """
         :param api_manager: сессия
         :param response_get_movie_info_data: данные фильма, которые собираемся менять
-        :param **kwargs: параметры для изменения сгенерированных данных
+        :param expected_status: ожидаемый статус-код
+        :param kwargs: кастомные параметры для редактирования фильма
         :return: ответ с сервера об обновлении информации о фильме
         """
 
         # Генерация новых данных для замены старых
         new_movie_data_for_patch = DataGenerator.generate_random_data_for_patch_movies_info(response_get_movie_info_data)
 
-        # обновление сгененированных данных указанными в функции
+        # обновление сгенерированных данных указанными в функции
         new_movie_data_for_patch.update(kwargs)
 
         # Замена данных фильма на новые
@@ -126,7 +128,7 @@ class MovieHelper:
 
     # Удаление фильма с проверкой
     @staticmethod
-    def delete_movie_whith_assert(api_manager, movie_id, expected_status=404):
+    def delete_movie_with_assert(api_manager, movie_id, expected_status=404):
         """
         :param api_manager: сессия
         :param movie_id: id фильма, который собираемся удалить
