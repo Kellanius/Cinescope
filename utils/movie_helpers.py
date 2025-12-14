@@ -57,8 +57,6 @@ class MovieHelper:
         return response.json()
 
 
-
-
     # Генерация, создание фильма и перевод данных в json формат
     @staticmethod
     def generate_data_and_create_movie(api_manager, expected_status = 201, **kwargs):
@@ -97,7 +95,6 @@ class MovieHelper:
         response_get_movie_info_data = response_get_movie_info.json()
 
         return response_get_movie_info_data
-
 
 
     # Генерация новых данных и замена старых данных на новые

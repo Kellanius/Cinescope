@@ -1,17 +1,15 @@
 import constants as const
 from conftest import api_manager
 from utils.data_generator import DataGenerator
-from custom_requester.custom_requester import CustomRequester
-from tests.api.api_manager import ApiManager
 from utils.auth_data_builder import AuthDataBuilder
 import secrets
 from utils.assert_helpers import CustomAssertions
-from utils.price_utils import MoviePriceAnalyzer
 from faker import Faker
 import random
 from utils.movie_helpers import MovieHelper
 
 faker = Faker()
+
 
 class TestMovieAPI:
     # Класс для тестирования фильмов
@@ -20,12 +18,8 @@ class TestMovieAPI:
                     # ПОЗИТИВНЫЕ ПРОВЕРКИ
 ############################################################
 
-
-    # Авторизуемся под админом (дальше все проверки под админом)
+    # Авторизация под админом (дальше все проверки под админом)
     def test_login_admin(self, api_manager):
-        """
-        Авторизация админа.
-        """
 
         # Вызов метода авторизации через AuthAPI
         response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(secrets.ADMIN_AUTH_DATA))
@@ -33,15 +27,16 @@ class TestMovieAPI:
         # Сохранение токена админа в сессию
         api_manager.auth_api.authenticate(AuthDataBuilder.create_login_data(secrets.ADMIN_AUTH_DATA))
 
+        # Перевод данных ответа в json формат и проверка наличия токена
         response_data = response.json()
         assert "accessToken" in response_data, "Токен доступа отсутствует в ответе"
+
 
     #####################################
                   # Афиши
     #####################################
 
-
-    #### Получение афиш фильмов с параметрами по-умолчанию (без введения параметров) ####
+    #### Получение афиш фильмов с параметрами по-умолчанию (без введения своих параметров) ####
     def test_get_movies_info_with_default_params(self, api_manager):
 
         # Запрос на получение афиши с деволтными данными
@@ -72,7 +67,7 @@ class TestMovieAPI:
     def test_create_edit_delete_movie(self, api_manager):
         #### Создание фильма ####
 
-        # Генерация рандомных данных, создание фильма, получение данных о фильме с сайта (response_get_movie_info_data) и сгенерированных данных (random_data_for_new_movie)
+        # Генерация рандомных данных, создание фильма, получение данных о фильме с сайта (response_create_movie_data) и сгенерированных данных (random_data_for_new_movie)
         response_create_movie_data, random_data_for_new_movie = MovieHelper.generate_data_and_create_movie(api_manager)
 
         # Проверка, что фильм создан и информация о нём приходит с сайта
@@ -92,8 +87,7 @@ class TestMovieAPI:
 
 
         #### Удаление фильма с проверкой ####
-
-        response_delete_movie_data = MovieHelper.delete_movie_with_assert(api_manager, response_get_movie_info_data["id"], expected_status=404)
+        MovieHelper.delete_movie_with_assert(api_manager, response_get_movie_info_data["id"], expected_status=404)
 
 
     ############################################################
@@ -108,7 +102,7 @@ class TestMovieAPI:
     def test_get_incorrect_movies_info_with_random_params(self, api_manager):
 
         # Запрос на получение афиши с рандомными некорректными данными. Ответ должен выдать 400 ошибку
-        response_afisha_data, random_data_for_afisha_filter = MovieHelper.get_afisha(api_manager, data="random", correct_data=False, expected_status=400)
+        MovieHelper.get_afisha(api_manager, data="random", correct_data=False, expected_status=400)
 
     #####################################
             # Создание фильма
@@ -117,31 +111,27 @@ class TestMovieAPI:
 
         #### Создание фильма с некорректными данными ####
 
-        ## Создание фильма с текстом вместо прайса ##
-        response_create_movie, random_data_for_new_incorrect_movies = MovieHelper.generate_data_and_create_movie(api_manager, price="abc", expected_status=400)
+        # Создание фильма с текстом вместо прайса
+        MovieHelper.generate_data_and_create_movie(api_manager, price="abc", expected_status=400)
 
+        # Создание фильма без названия
+        MovieHelper.generate_data_and_create_movie(api_manager, name="", expected_status=400)
 
-        ## Создание фильма без названия ##
-        response_create_movie, random_data_for_new_incorrect_movies = MovieHelper.generate_data_and_create_movie(api_manager, name="", expected_status=400)
-
-
-        ## Создание фильма с несуществующей location ##
-        response_create_movie, random_data_for_new_incorrect_movies = MovieHelper.generate_data_and_create_movie(api_manager, location="ABC", expected_status=400)
+        # Создание фильма с несуществующей location
+        MovieHelper.generate_data_and_create_movie(api_manager, location="ABC", expected_status=400)
 
 
         ## Создание фильма без данных ##
         # Создание пустых данных для фильма
-        random_data_for_new_incorrect_movies = {}
+        empty_data = {}
 
-        # Запрос на создание фильма. Должна быть 400 ошибка
-        response_create_movie = api_manager.movies_api.create_new_movies(random_data_for_new_incorrect_movies, expected_status=400)
+        # Запрос на создание фильма без данных. Должна быть 400 ошибка
+        api_manager.movies_api.create_new_movies(empty_data, expected_status=400)
 
 
         ## Создание фильма с уже существующим именем ##
-
-
         # Генерация корректных данных для фильма, но с тем же названием, что у уже созданного фильма (created_movie). Ожидается ошибка 409
-        response_create_second_movie, random_data_for_second_new_movies = MovieHelper.generate_data_and_create_movie(api_manager, name=f"{created_movie['name']}", expected_status=409)
+        MovieHelper.generate_data_and_create_movie(api_manager, name=f"{created_movie['name']}", expected_status=409)
 
 
     #####################################
@@ -149,7 +139,7 @@ class TestMovieAPI:
     #####################################
     def test_get_movie_info_with_incorrect_id(self, api_manager):
         ## Получение данных фильма по несуществующему id ##
-        response_get_movie_info_with_incorrect_id = api_manager.movies_api.get_movie_info(DataGenerator.generate_random_id(), expected_status=404)
+        api_manager.movies_api.get_movie_info(DataGenerator.generate_random_id(), expected_status=404)
 
 
     #####################################
@@ -157,7 +147,7 @@ class TestMovieAPI:
     #####################################
     def test_delete_movie_with_incorrect_id(self, api_manager):
         ## Удаление фильма с несуществующим id ##
-        response_delete_movie_with_incorrect_id = api_manager.movies_api.delete_movie(DataGenerator.generate_random_id(), expected_status=404)
+        api_manager.movies_api.delete_movie(DataGenerator.generate_random_id(), expected_status=404)
 
 
     def test_incorrect_patch_movie(self, api_manager, created_movie):
@@ -166,19 +156,15 @@ class TestMovieAPI:
     #####################################
         ## Редактирование фильма некорректными данными ##
 
-        # ИЗМЕНЕНИЕ (фильм уже создан в фикстуре created_movies)
-
         # Редактирование данных на некорректные (минусовый прайс)
         new_incorrect_price = random.randint(-1000, -1)
 
         # Генерация новых данных, замена их старыми, изменение прайса на некорректный, отправка запроса. Ожидается 400 ошибка
-        response_patch_movie_info_data = MovieHelper.generate_data_and_patch_movie(api_manager, created_movie, price=new_incorrect_price, expected_status=400)
+        MovieHelper.generate_data_and_patch_movie(api_manager, created_movie, price=new_incorrect_price, expected_status=400)
+
+        # Удаление фильма
+        MovieHelper.delete_movie_with_assert(api_manager, created_movie["id"])
 
 
-        #### Удаление фильма с проверкой ####
-        response_delete_movie_data = MovieHelper.delete_movie_with_assert(api_manager, created_movie["id"], expected_status=404)
-
-
-        #### Сразу проверка PATCH в несуществующий айди (после удаления фильма айди остался в response_get_movie_info_data,
-        # но отправить изменение по этому айди не получится, т.к. фильма уже нет на сервере. Ожидается 404 ошибка ####
-        response_patch_movie_info_to_non_existent_id = MovieHelper.generate_data_and_patch_movie(api_manager, created_movie, expected_status=404)
+        ## Проверка PATCH в несуществующий айди из удалённого created_movie. Ожидается 404 ошибка
+        MovieHelper.generate_data_and_patch_movie(api_manager, created_movie, expected_status=404)

@@ -1,6 +1,5 @@
 import constants as const
 from custom_requester.custom_requester import CustomRequester
-import utils.data_generator as data_gener
 
 class AuthAPI(CustomRequester):
     """

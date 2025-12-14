@@ -1,15 +1,8 @@
 import requests
-from requests import Session
-
-from tests.api.auth_api import AuthAPI
-from constants import BASE_URL, HEADERS, REGISTER_ENDPOINT, LOGIN_ENDPOINT
 import pytest
 from utils.data_generator import DataGenerator
 from faker import Faker
-from custom_requester.custom_requester import CustomRequester
 from tests.api.api_manager import ApiManager
-import secrets
-from utils.auth_data_builder import AuthDataBuilder
 from utils.movie_helpers import MovieHelper
 
 faker = Faker()
@@ -72,7 +65,7 @@ def created_movie(api_manager):
     # возвращает данные созданного фильма
     yield movie_data
 
-    # удаляет фильм после завершения сессии, если он уже не удалён
+    # удаляет фильм после завершения функции, если он уже не удалён
     try:
         # Проверка, существует ли фильм всё ещё
         api_manager.movies_api.get_movie_info(movie_data["id"], expected_status=200)

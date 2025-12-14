@@ -1,6 +1,5 @@
 from custom_requester.custom_requester import CustomRequester
 import constants as const
-from utils.data_generator import DataGenerator
 
 class MoviesAPI(CustomRequester):
     """
@@ -10,10 +9,10 @@ class MoviesAPI(CustomRequester):
     def __init__(self, session):
         super().__init__(session=session, base_url = const.MOVIES_URL)
 
+
     ############################################################
             # БАЗОВЫЕ ФУНКЦИИ (ДЛЯ ПОЗИТИВНЫХ ПРОВЕРОК)
     ############################################################
-
 
     def get_afisha_info(self, expected_status=200, **kwargs):
         """
@@ -45,7 +44,6 @@ class MoviesAPI(CustomRequester):
             endpoint=f"{const.MOVIES_ENDPOINT}/{movie_id}",
             expected_status=expected_status
         )
-
 
     def create_new_movies(self, data_for_new_movies, expected_status=201):
         """

@@ -13,7 +13,6 @@ class UserAPI(CustomRequester):
             base_url = const.BASE_URL
         )
 
-
     def get_user_info(self, user_id, expected_status=200):
         """
         Получение информации о пользователе.

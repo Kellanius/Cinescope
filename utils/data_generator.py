@@ -45,6 +45,7 @@ class DataGenerator:
 
         return ''.join(password)
 
+
     @staticmethod
     def generate_negative_random_password_over_max():
         """
