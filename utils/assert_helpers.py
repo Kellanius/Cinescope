@@ -39,15 +39,43 @@ class CustomAssertions:
 
         if args is None:
             if message is None:
-                message = f"Ожидалось что {expectation} не совпадает с фактическим {actual}"
+                message = f"Ожидалось что {expectation} не совпадает с {actual}"
             assert expectation != actual, message
 
 
         else:
             for i in args:
                 if message is None:
-                    message = f"Ожидалось что {expectation} не совпадает с фактическим {actual}"
+                    message = f"Ожидалось что {expectation} не совпадает с {actual}"
                 assert expectation[i] != actual[i], message
+
+
+    # Проверка того, что одна или несколько переменных есть в данных
+    @staticmethod
+    def assert_var_in_data(var, data, message = None):
+        """
+        :param var: переменная
+        :param data: данные в которых проверяем есть ли переменная
+        :param message: сообщение, если проверка провалена
+        """
+        # Если мы проверяем 1 переменную, то в данных будет искаться только она
+        if isinstance(var, str):
+            if message is None:
+                message = f"Ожидалось что переменная {var} имеется в ответе {data}"
+
+            assert var in data, message
+
+        # Если проверяем несколько переменных (список), то в каждая будет проверяться на наличие в данных
+        if isinstance(var, list):
+            if message is None:
+                for i in var:
+                    message = f"Ожидалось что переменная {i} имеется в ответе {data}"
+                    assert i in data, message
+            else:
+                for i in var:
+                    assert i in data, message
+
+
 
 
     # Проверка того, что цены попадают в фильтрационный диапазон
@@ -56,7 +84,7 @@ class CustomAssertions:
         """
         :param filter_params: параметры фильтрации
         :param afisha_response: это ответ от API с афишей
-        проверяем, попали ли все фильмы из afisha_response в ожидаемый диапазон цен из filter_params
+        проверяет, попали ли все фильмы из afisha_response в ожидаемый диапазон цен из filter_params
         """
         assert filter_params["maxPrice"] >= MoviePriceAnalyzer.get_max_price(afisha_response), "В афишу попали фильмы с ценой больше, чем указано в фильтре"
         assert filter_params["minPrice"] <= MoviePriceAnalyzer.get_min_price(afisha_response), "В афишу попали фильмы с ценой меньше, чем указано в фильтре"

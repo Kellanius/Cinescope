@@ -1,61 +1,61 @@
 import utils.data_generator as data_gener
 from utils.auth_data_builder import AuthDataBuilder
+from utils.assert_helpers import CustomAssertions
 
 
 class TestAuthAPI:
+    ############################################################
+    # ПОЗИТИВНЫЕ ПРОВЕРКИ
+    ############################################################
     def test_register_user(self, api_manager, test_user):
-        """
-        Тест на регистрацию пользователя.
-        """
+        ## Тест на регистрацию пользователя.
+
+        #Регистрация пользователя с рандомными данными (test_user)
         response = api_manager.auth_api.register_user(test_user)
         response_data = response.json()
 
-        assert response_data["email"] == test_user["email"], "Email не совпадает"
-        assert "id" in response_data, "ID пользователя отсутствует в ответе"
-        assert "roles" in response_data, "Роли пользователя отсутствуют в ответе"
-        assert "USER" in response_data["roles"], "Роль USER должна быть у пользователя"
+        # Проверка на идентичность email в сгенерированных и зарегистрированных данных
+        CustomAssertions.assert_equals(response_data["email"], test_user["email"])
+        # Проверка, что переменные есть в ответе
+        CustomAssertions.assert_var_in_data(["id", "roles"], response_data)
+        CustomAssertions.assert_var_in_data("USER", response_data["roles"])
 
 
     def test_register_and_login_user(self, api_manager, registered_user):
-        """
-        Тест на регистрацию и авторизацию пользователя.
-        """
+        ## Тест на регистрацию и авторизацию пользователя.
 
         # Вызов метода авторизации через AuthAPI
         response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(registered_user))
-
         response_data = response.json()
-        assert "accessToken" in response_data, "Токен доступа отсутствует в ответе"
-        assert response_data["user"]["email"] == registered_user["email"], "Email не совпадает"
+
+        # Проверка наличия токена в ответе + проверка корректности email
+        CustomAssertions.assert_var_in_data("accessToken", response_data, message="Токен доступа отсутствует в ответе")
+        CustomAssertions.assert_equals(response_data["user"]["email"], registered_user["email"])
 
 
+    ############################################################
+    # НЕГАТИВНЫЕ ПРОВЕРКИ
+    ############################################################
     def test_incorrect_password_auth_user(self, api_manager, test_user, registered_user):
+        ## Тест на авторизацию с некорректным паролем
 
         # Замена пароля на неподходящий (больше 20 символов)
         incorrect_password = data_gener.DataGenerator.generate_negative_random_password_over_max()
 
-        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(registered_user, password=incorrect_password), expected_status=401)
-
-        # Проверка
-        assert response.status_code == 401, "Пользователь авторизован с неверным паролем"
+        # Попытка авторизации с неверным паролем. Ожидается 401 ошибка
+        api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(registered_user, password=incorrect_password), expected_status=401)
 
 
     def test_incorrect_email_auth_user(self, test_user, api_manager, registered_user):
-        # Авторизация с несуществующим email
+        ## Тест авторизацию с несуществующим email
 
         # Замена email на несуществующий
         incorrect_email = data_gener.DataGenerator.generate_non_existent_random_email()
 
-        # Отправка запроса на авторизацию
-        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(registered_user, email=incorrect_email), expected_status=401)
-
-        # Проверка
-        assert response.status_code == 401, "Пользователь авторизован с неверным email"
+        # Отправка запроса на авторизацию. Ожидается 401 ошибка
+        api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(registered_user, email=incorrect_email), expected_status=401)
 
 
     def test_auth_user_without_data(self, test_user, api_manager, registered_user):
-        # Авторизация с пустым телом запроса
-        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(), expected_status=401)
-
-        # Проверка
-        assert response.status_code == 401, "Авторизация прошла без данных"
+        ## Тест на авторизацию с пустым телом запроса. Ожидается 401 ошибка
+        api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(), expected_status=401)

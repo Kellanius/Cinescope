@@ -14,7 +14,7 @@ class DataGenerator:
     @staticmethod
     def generate_non_existent_random_email():
         random_string = ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
-        return f"kek{random_string}@gmail.com"
+        return f"keks{random_string}@mail.kr"
 
     @staticmethod
     def generate_random_name():

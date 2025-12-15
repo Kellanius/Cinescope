@@ -40,26 +40,26 @@ class TestMovieAPI:
     def test_get_movies_info_with_default_params(self, api_manager):
 
         # Запрос на получение афиши с деволтными данными
-        response_afisha_data = MovieHelper.get_afisha(api_manager, data="default")
+        afisha_data = MovieHelper.get_afisha(api_manager, data="default")
 
         # Сравнение инфы из полученного ответа с дефолтными параметрами для афиша фильтра
-        CustomAssertions.assert_equals(const.default_params_for_afisha_filter, response_afisha_data, "pageSize", "page")
+        CustomAssertions.assert_equals(const.default_params_for_afisha_filter, afisha_data, "pageSize", "page")
 
         # Проверка, что цены фильмов попадают в фильтрационный диапазон.
-        CustomAssertions.assert_afisha_prices_in_range(const.default_params_for_afisha_filter, response_afisha_data)
+        CustomAssertions.assert_afisha_prices_in_range(const.default_params_for_afisha_filter, afisha_data)
 
 
     #### Получение афиш фильмов с рандомными параметрами ####
     def test_get_movies_info_with_random_params(self, api_manager):
 
         # Запрос на получение афиши с рандомными данными
-        response_afisha_data, random_data_for_afisha_filter = MovieHelper.get_afisha(api_manager, data="random")
+        afisha_data, random_data_for_afisha_filter = MovieHelper.get_afisha(api_manager, data="random")
 
         # Проверка того, что данные в ответе совпадают со сгенерированными
-        CustomAssertions.assert_equals(random_data_for_afisha_filter, response_afisha_data, "pageSize", "page")
+        CustomAssertions.assert_equals(random_data_for_afisha_filter, afisha_data, "pageSize", "page")
 
         # Проверка, что цены фильмов в афише попадают в фильтрационный диапазон рандомно сгенерированных параметров
-        CustomAssertions.assert_afisha_prices_in_range(random_data_for_afisha_filter, response_afisha_data)
+        CustomAssertions.assert_afisha_prices_in_range(random_data_for_afisha_filter, afisha_data)
 
     #####################################
     # Создание/изменение/удаление фильма
@@ -67,27 +67,27 @@ class TestMovieAPI:
     def test_create_edit_delete_movie(self, api_manager):
         #### Создание фильма ####
 
-        # Генерация рандомных данных, создание фильма, получение данных о фильме с сайта (response_create_movie_data) и сгенерированных данных (random_data_for_new_movie)
-        response_create_movie_data, random_data_for_new_movie = MovieHelper.generate_data_and_create_movie(api_manager)
+        # Генерация рандомных данных, создание фильма, получение данных о фильме с сайта (create_movie_data) и сгенерированных данных (random_data_for_new_movie)
+        create_movie_data, random_data_for_new_movie = MovieHelper.generate_data_and_create_movie(api_manager)
 
         # Проверка, что фильм создан и информация о нём приходит с сайта
-        response_get_movie_info_data = MovieHelper.get_movie_info(api_manager, response_create_movie_data["id"])
+        get_movie_data = MovieHelper.get_movie_info(api_manager, create_movie_data["id"])
 
         # Проверки того, что данные из ответа совпадают с рандомно сгенерированными параметрами для фильма
-        CustomAssertions.assert_equals(random_data_for_new_movie, response_get_movie_info_data, "name", "price", "description", "location") # проверка названия, цены, описания, локации фильма
+        CustomAssertions.assert_equals(random_data_for_new_movie, get_movie_data, "name", "price", "description", "location") # проверка названия, цены, описания, локации фильма
 
 
         #### Изменение фильма (PATCH) ####
 
         # Генерация новых и замена старых данных. Получаем ответ в json формате об изменении данных
-        response_patch_movie_info_data = MovieHelper.generate_data_and_patch_movie(api_manager, response_get_movie_info_data)
+        patch_movie_data = MovieHelper.generate_data_and_patch_movie(api_manager, get_movie_data)
 
         # Проверка того что данные изменились после отправки запроса на PATCH
-        CustomAssertions.assert_non_equals(response_patch_movie_info_data, response_get_movie_info_data, "name", "price", "description", "location") # проверка, что название, цена, описание, локация изменились
+        CustomAssertions.assert_non_equals(patch_movie_data, get_movie_data, "name", "price", "description", "location") # проверка, что название, цена, описание, локация изменились
 
 
         #### Удаление фильма с проверкой ####
-        MovieHelper.delete_movie_with_assert(api_manager, response_get_movie_info_data["id"], expected_status=404)
+        MovieHelper.delete_movie_with_assert(api_manager, get_movie_data["id"], expected_status=404)
 
 
     ############################################################

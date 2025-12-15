@@ -73,12 +73,12 @@ class MovieHelper:
         response_create_movie = api_manager.movies_api.create_new_movies(random_data_for_new_movie, expected_status=expected_status)
 
         # Перевод данных ответа о создании фильма в json формат
-        response_create_movie_data = response_create_movie.json()
+        create_movie_data = response_create_movie.json()
 
-        return response_create_movie_data, random_data_for_new_movie
+        return create_movie_data, random_data_for_new_movie
 
 
-    # Проверка, что фильм создан с данными параметрами
+    # Проверка, что фильм создан и возврат ответа в json формате
     @staticmethod
     def get_movie_info(api_manager, movie_id, expected_status=200):
         """
@@ -88,39 +88,39 @@ class MovieHelper:
         :return: данные о фильме в json формате
         """
 
-        # Проверка, что фильм создан с данными параметрами
-        response_get_movie_info = api_manager.movies_api.get_movie_info(movie_id, expected_status=expected_status)
+        # Проверка, что фильм создан
+        response_get_movie = api_manager.movies_api.get_movie(movie_id, expected_status=expected_status)
 
         # Перевод данных ответа с информацией о фильме в json формат
-        response_get_movie_info_data = response_get_movie_info.json()
+        get_movie_data = response_get_movie.json()
 
-        return response_get_movie_info_data
+        return get_movie_data
 
 
     # Генерация новых данных и замена старых данных на новые
     @staticmethod
-    def generate_data_and_patch_movie(api_manager, response_get_movie_info_data, expected_status=200, **kwargs):
+    def generate_data_and_patch_movie(api_manager, old_movie_data_for_patch, expected_status=200, **kwargs):
         """
         :param api_manager: сессия
-        :param response_get_movie_info_data: данные фильма, которые собираемся менять
+        :param old_movie_data_for_patch: данные фильма, которые собираемся менять
         :param expected_status: ожидаемый статус-код
         :param kwargs: кастомные параметры для редактирования фильма
         :return: ответ с сервера об обновлении информации о фильме
         """
 
         # Генерация новых данных для замены старых
-        new_movie_data_for_patch = DataGenerator.generate_random_data_for_patch_movies_info(response_get_movie_info_data)
+        new_movie_data_for_patch = DataGenerator.generate_random_data_for_patch_movies_info(old_movie_data_for_patch)
 
         # обновление сгенерированных данных указанными в функции
         new_movie_data_for_patch.update(kwargs)
 
         # Замена данных фильма на новые
-        response_patch_movie_info = api_manager.movies_api.patch_movie_info(response_get_movie_info_data["id"], new_movie_data_for_patch, expected_status=expected_status)
+        response_patch_movie = api_manager.movies_api.patch_movie_info(old_movie_data_for_patch["id"], new_movie_data_for_patch, expected_status=expected_status)
 
         # Перевод ответа об изменении данных о фильме в json формат
-        response_patch_movie_info_data = response_patch_movie_info.json()
+        patch_movie_data = response_patch_movie.json()
 
-        return response_patch_movie_info_data
+        return patch_movie_data
 
 
     # Удаление фильма с проверкой
@@ -138,9 +138,9 @@ class MovieHelper:
         response_delete_movie = api_manager.movies_api.delete_movie(movie_id)
 
         # Перевод ответа об удалении фильма в json формат
-        response_delete_movie_data = response_delete_movie.json()
+        delete_movie_data = response_delete_movie.json()
 
         # Проверка, что фильма больше не существует (GET запрос на получение инфы о фильме)
-        response_get_deleted_movie_info = api_manager.movies_api.get_movie_info(response_delete_movie_data["id"], expected_status=expected_status)
+        api_manager.movies_api.get_movie_info(delete_movie_data["id"], expected_status=expected_status)
 
-        return response_delete_movie_data
+        return delete_movie_data
