@@ -13,7 +13,7 @@ class UserAPI(CustomRequester):
             base_url = const.BASE_URL
         )
 
-    def get_user_info(self, user_id, expected_status=200):
+    def get_user(self, user_id, expected_status=200):
         """
         Получение информации о пользователе.
         :param user_id: ID пользователя.
@@ -22,6 +22,19 @@ class UserAPI(CustomRequester):
         return self.send_request(
             method="GET",
             endpoint=f"{const.USER_ENDPOINT}/{user_id}",
+            expected_status=expected_status
+        )
+
+    def create_user(self, user_data, expected_status=201):
+        """
+        Создание нового пользователя.
+        :param user_data: данные нового пользователя
+        :param expected_status: Ожидаемый статус-код.
+        """
+        return self.send_request(
+            method="POST",
+            endpoint=const.USER_ENDPOINT,
+            data=user_data,
             expected_status=expected_status
         )
 

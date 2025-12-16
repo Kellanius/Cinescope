@@ -15,3 +15,7 @@ class ApiManager:
         self.auth_api = AuthAPI(session)
         self.user_api = UserAPI(session)
         self.movies_api = MoviesAPI(session)
+
+    # функция для возможности закрытия сессии
+    def close_session(self):
+        self.session.close()

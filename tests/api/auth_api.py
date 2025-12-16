@@ -37,10 +37,18 @@ class AuthAPI(CustomRequester):
         )
 
     def authenticate(self, user_creds):
-        login_data = {
-            "email": user_creds["email"],
-            "password": user_creds["password"]
-        }
+        if isinstance(user_creds, tuple or list):
+            login_data = {
+                "email": user_creds[0],
+                "password": user_creds[1]
+            }
+        elif isinstance(user_creds, dict):
+            login_data = {
+                "email": user_creds["email"],
+                "password": user_creds["password"]
+            }
+        else:
+            raise TypeError(f"{user_creds} должно быть tuple, list или dict")
 
         response = self.login_user(login_data).json()
         if "accessToken" not in response:

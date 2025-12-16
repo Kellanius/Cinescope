@@ -4,6 +4,9 @@ from utils.data_generator import DataGenerator
 from faker import Faker
 from tests.api.api_manager import ApiManager
 from utils.movie_helpers import MovieHelper
+from resurses.user_creds import SuperAdminCreds
+from entities.user import User
+
 
 faker = Faker()
 
@@ -76,3 +79,69 @@ def created_movie(api_manager):
     # Если фильм не существует - пропускает
     except (AssertionError, ValueError):
         pass
+
+
+# Фикстура для создания сессии юзера
+@pytest.fixture
+def user_session():
+    # Создание списка с сессиями юзеров
+    user_pool = []
+
+    # Создание сессии для юзера
+    def _create_user_session():
+        session = requests.Session()
+        session_of_user = ApiManager(session)
+        user_pool.append(session_of_user)
+        return session_of_user
+
+    yield _create_user_session
+
+    # После тестирования закрывает все сессии
+    for user in user_pool:
+        user.close_session()
+
+
+# Фикстура для создания юзера с ролью SUPER ADMIN
+@pytest.fixture
+def super_admin(user_session):
+    # Создание новой сессии специально для админа
+    new_session = user_session()
+
+    # Создание админского юзера
+    super_admin_user = User(
+        email=SuperAdminCreds.USERNAME,
+        password=SuperAdminCreds.PASSWORD,
+        roles=["SUPER_ADMIN"],
+        api=new_session
+    )
+
+    # добавление токена админа в админскую сессию
+    super_admin_user.api.auth_api.authenticate(super_admin_user.creds)
+
+    # возвращение нового пользователя супер_админа
+    return super_admin_user
+
+
+# Фикстура формирования данных для создания пользователя
+@pytest.fixture(scope="function")
+def creation_user_data(test_user):
+    # По сути берем все данные из test_user
+    # и дополняем необходимыми для создания нового юзера
+    # Обновляю ещё и логин, мыло, пароль, т.к. у test_user область видимости сессия,
+    # поэтому всегда создается один и тот же юзер в разных тестах
+
+    random_email = DataGenerator.generate_random_email()
+    random_name = DataGenerator.generate_random_name()
+    random_password = DataGenerator.generate_random_password()
+
+
+    user_data = test_user.copy()
+    user_data.update({
+        "email": random_email,
+        "fullName": random_name,
+        "password": random_password,
+        "passwordRepeat": random_password,
+        "verified": True,
+        "banned": False
+    })
+    return user_data

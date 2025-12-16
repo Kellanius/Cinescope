@@ -22,10 +22,10 @@ class TestMovieAPI:
     def test_login_admin(self, api_manager):
 
         # Вызов метода авторизации через AuthAPI
-        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(secrets.ADMIN_AUTH_DATA))
+        response = api_manager.auth_api.login_user(AuthDataBuilder.create_login_data(secrets.SUPER_ADMIN_AUTH_DATA))
 
         # Сохранение токена админа в сессию
-        api_manager.auth_api.authenticate(AuthDataBuilder.create_login_data(secrets.ADMIN_AUTH_DATA))
+        api_manager.auth_api.authenticate(AuthDataBuilder.create_login_data(secrets.SUPER_ADMIN_AUTH_DATA))
 
         # Перевод данных ответа в json формат и проверка наличия токена
         response_data = response.json()
