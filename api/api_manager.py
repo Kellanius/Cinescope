@@ -1,6 +1,6 @@
-from tests.api.auth_api import AuthAPI
-from tests.api.user_api import UserAPI
-from tests.api.movies.movies_api import MoviesAPI
+from api.auth_api import AuthAPI
+from api.user_api import UserAPI
+from api.movies_api import MoviesAPI
 
 class ApiManager:
     """

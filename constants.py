@@ -1,3 +1,11 @@
+from enum import Enum
+
+class Roles(Enum):
+    USER = "USER"
+    ADMIN = "ADMIN"
+    SUPER_ADMIN = "SUPER_ADMIN"
+
+
 BASE_URL = "https://auth.dev-cinescope.coconutqa.ru"
 MOVIES_URL = "https://api.dev-cinescope.coconutqa.ru"
 
@@ -21,3 +29,5 @@ default_params_for_afisha_filter = {
     "genreId": 1,
     "createdAt": "asc"
 }
+
+

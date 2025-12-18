@@ -71,7 +71,7 @@ class TestMovieAPI:
         create_movie_data, random_data_for_new_movie = MovieHelper.generate_data_and_create_movie(api_manager)
 
         # Проверка, что фильм создан и информация о нём приходит с сайта
-        get_movie_data = MovieHelper.get_movie_info(api_manager, create_movie_data["id"])
+        get_movie_data = MovieHelper.get_movie_data(api_manager, create_movie_data["id"])
 
         # Проверки того, что данные из ответа совпадают с рандомно сгенерированными параметрами для фильма
         CustomAssertions.assert_equals(random_data_for_new_movie, get_movie_data, "name", "price", "description", "location") # проверка названия, цены, описания, локации фильма
@@ -137,9 +137,9 @@ class TestMovieAPI:
     #####################################
         # Получение данных фильма
     #####################################
-    def test_get_movie_info_with_incorrect_id(self, api_manager):
+    def test_get_movie_with_incorrect_id(self, api_manager):
         ## Получение данных фильма по несуществующему id ##
-        api_manager.movies_api.get_movie_info(DataGenerator.generate_random_id(), expected_status=404)
+        api_manager.movies_api.get_movie(DataGenerator.generate_random_id(), expected_status=404)
 
 
     #####################################

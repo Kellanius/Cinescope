@@ -2,10 +2,11 @@ import requests
 import pytest
 from utils.data_generator import DataGenerator
 from faker import Faker
-from tests.api.api_manager import ApiManager
+from api.api_manager import ApiManager
 from utils.movie_helpers import MovieHelper
 from resurses.user_creds import SuperAdminCreds
 from entities.user import User
+from constants import Roles
 
 
 faker = Faker()
@@ -24,7 +25,7 @@ def test_user():
         "fullName": random_name,
         "password": random_password,
         "passwordRepeat": random_password,
-        "roles": ["USER"]
+        "roles": [Roles.USER.value]
     }
 
 
@@ -71,7 +72,7 @@ def created_movie(api_manager):
     # удаляет фильм после завершения функции, если он уже не удалён
     try:
         # Проверка, существует ли фильм всё ещё
-        api_manager.movies_api.get_movie_info(movie_data["id"], expected_status=200)
+        api_manager.movies_api.get_movie(movie_data["id"], expected_status=200)
 
         # Если существует, удаляет его
         MovieHelper.delete_movie_with_assert(api_manager, movie_data["id"])
@@ -111,7 +112,7 @@ def super_admin(user_session):
     super_admin_user = User(
         email=SuperAdminCreds.USERNAME,
         password=SuperAdminCreds.PASSWORD,
-        roles=["SUPER_ADMIN"],
+        roles=[Roles.SUPER_ADMIN.value],
         api=new_session
     )
 
@@ -145,3 +146,26 @@ def creation_user_data(test_user):
         "banned": False
     })
     return user_data
+
+##############################################
+# Фикстуры для пользователей с разными ролями
+##############################################
+
+# Создание обычного юзера с ролью USER
+@pytest.fixture
+def common_user(user_session, super_admin, creation_user_data):
+    new_session = user_session()
+
+    common_user_data = User(
+        creation_user_data["email"],
+        creation_user_data["password"],
+        [Roles.USER.value],
+        new_session)
+
+    # Создание юзера через админскую сессию
+    super_admin.api.user_api.create_user(creation_user_data)
+
+    # добавление токена юзера в его сессию
+    common_user_data.api.auth_api.authenticate(common_user_data.creds)
+
+    return common_user_data

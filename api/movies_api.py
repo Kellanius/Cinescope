@@ -32,7 +32,7 @@ class MoviesAPI(CustomRequester):
             expected_status=expected_status
         )
 
-    def get_movie_info(self, movie_id, expected_status=200):
+    def get_movie(self, movie_id, expected_status=200):
         """
         :param movie_id: айди фильма
         :param expected_status: ожидаемый статус-код

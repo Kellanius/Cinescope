@@ -80,7 +80,7 @@ class MovieHelper:
 
     # Проверка, что фильм создан и возврат ответа в json формате
     @staticmethod
-    def get_movie_info(api_manager, movie_id, expected_status=200):
+    def get_movie_data(api_manager, movie_id, expected_status=200):
         """
         :param api_manager: сессия
         :param movie_id: id фильма
@@ -141,6 +141,6 @@ class MovieHelper:
         delete_movie_data = response_delete_movie.json()
 
         # Проверка, что фильма больше не существует (GET запрос на получение инфы о фильме)
-        api_manager.movies_api.get_movie_info(delete_movie_data["id"], expected_status=expected_status)
+        api_manager.movies_api.get_movie(delete_movie_data["id"], expected_status=expected_status)
 
         return delete_movie_data
