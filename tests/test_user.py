@@ -1,12 +1,32 @@
+from unittest import expectedFailure
+
 from faker import Faker
+import pytest
+import conftest
 
 faker = Faker()
 
 
 class TestUserAPI:
+###########################
+# ПОЛОЖИТЕЛЬНЫЕ ПРОВЕРКИ
+###########################
 
-    def test_create_user(self, super_admin, creation_user_data):
-        response = super_admin.api.user_api.create_user(creation_user_data).json()
+    #@pytest.mark.parametrize("user_fixture_name", [
+        #"super_admin",
+        #"creation_admin",
+        #(conftest.creation_common_user, 403), - нужно проверить отдельно, чтобы не мешать положительные поверки с отрицательными
+        #"creation_super_admin"
+    #])
+    def test_create_user(self, creation_admin, creation_user_data):
+        """
+        Проверка сначала регистрации через существующего супер админа, а затем через все другие роли сгенерированные
+        :param user_fixture_name:
+        :param creation_user_data:
+        :return:
+        """
+
+        response = creation_admin.api.user_api.create_user(creation_user_data).json()
 
         assert response.get("id") and response["id"] != "", "ID должен быть не пустым"
         assert response.get('email') == creation_user_data['email']

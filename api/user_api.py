@@ -38,6 +38,20 @@ class UserAPI(CustomRequester):
             expected_status=expected_status
         )
 
+    def patch_user(self, user_data, user_id, expected_status=200):
+        """
+        Создание нового пользователя.
+        :param user_data: данные нового пользователя
+        :param user_id: id пользователя
+        :param expected_status: Ожидаемый статус-код.
+        """
+        return self.send_request(
+            method="PATCH",
+            endpoint=f"{const.USER_ENDPOINT}/{user_id}",
+            data=user_data,
+            expected_status=expected_status
+        )
+
     def delete_user(self, user_id, expected_status=204):
         """
         Удаление пользователя.

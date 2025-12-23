@@ -102,7 +102,7 @@ def user_session():
         user.close_session()
 
 
-# Фикстура для создания юзера с ролью SUPER ADMIN
+# Фикстура для авторизации юзера с ролью SUPER ADMIN
 @pytest.fixture
 def super_admin(user_session):
     # Создание новой сессии специально для админа
@@ -153,7 +153,7 @@ def creation_user_data(test_user):
 
 # Создание обычного юзера с ролью USER
 @pytest.fixture
-def common_user(user_session, super_admin, creation_user_data):
+def creation_common_user(user_session, super_admin, creation_user_data):
     new_session = user_session()
 
     common_user_data = User(
@@ -163,9 +163,77 @@ def common_user(user_session, super_admin, creation_user_data):
         new_session)
 
     # Создание юзера через админскую сессию
-    super_admin.api.user_api.create_user(creation_user_data)
+    response_data = super_admin.api.user_api.create_user(creation_user_data).json
 
     # добавление токена юзера в его сессию
     common_user_data.api.auth_api.authenticate(common_user_data.creds)
 
-    return common_user_data
+    yield common_user_data
+
+    try:
+        super_admin.api.user_api.delete_user(response_data["id"], expected_status=200)
+    except Exception as e:
+        print(f"⚠️ Не удалось удалить пользователя {response_data['id']}: {e}")
+
+
+
+# Создание админа с ролью ADMIN
+@pytest.fixture
+def creation_admin(user_session, super_admin, creation_user_data):
+    new_session = user_session()
+
+    admin_user_data = creation_user_data.copy()
+
+    # КОСТЫЛЬ. ПОКА НЕ СДЕЛАЮ ФАБРИКУ ДАННЫХ ЭТО БУДЕТ ПРЕДОТВРАЩАТЬ ОШИБКУ С ОДИНАКОВЫМИ ЕМАЙЛАМИ
+    random_email = DataGenerator.generate_random_email()
+    admin_user_data["email"] = random_email
+
+    # Создание через API пользователя
+    response_create = super_admin.api.user_api.create_user(admin_user_data)
+
+    # Вытаскивание id пользователя из ответа
+    user_id = response_create.json()['id']
+
+    patch_data = {"roles": [Roles.ADMIN.value]}
+
+    # Изменение данных пользователя (теперь он имеет роль админа)
+    response_patch = super_admin.api.user_api.patch_user(patch_data, user_id)
+
+    # Создание объекта USER с ролью ADMIN
+    admin_data = User(
+        email=admin_user_data["email"],
+        password=admin_user_data["password"],
+        roles=[Roles.ADMIN.value],
+        api=new_session
+    )
+
+    # добавление токена админа в его сессию
+    admin_data.api.auth_api.authenticate(admin_data.creds)
+
+    yield admin_data
+
+    # Чистка после теста
+    try:
+        super_admin.api.user_api.delete_user(user_id, expected_status=200)
+        print("Тестовый админ успешно удалён")
+    except Exception as e:
+        print(f"Не удалось удалить админа с id {user_id} из-за ошибки {e}")
+
+
+# Создание супер-админа с ролью SUPER_ADMIN
+@pytest.fixture
+def creation_super_admin(user_session, super_admin, creation_user_data):
+    new_session = user_session()
+
+    super_admin_data = User(
+        creation_user_data["email"],
+        creation_user_data["password"],
+        [Roles.SUPER_ADMIN.value],
+        new_session
+    )
+
+    super_admin.api.user_api.create_user(creation_user_data)
+
+    super_admin_data.api.auth_api.authenticate(super_admin_data.creds)
+
+    return super_admin_data
