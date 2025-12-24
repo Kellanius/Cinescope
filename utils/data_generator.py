@@ -1,6 +1,7 @@
 import random
 import string
 from faker import Faker
+from constants import Roles
 
 faker = Faker()
 
@@ -202,3 +203,73 @@ class DataGenerator:
     # генератор рандомного id фильма
     def generate_random_id():
         return f"{random.randint(1000000, 2000000)}"
+
+
+class UserDataFactory:
+    """Фабрика для создания данных пользователей"""
+
+    # Стандартные значения
+    DEFAULT_ROLE = Roles.USER.value
+    DEFAULT_VERIFIED = True
+    DEFAULT_BANNED = False
+
+    @classmethod
+    def create(cls, role=None, verified=None, banned=None, **kwargs):
+        """
+        Создаёт данные пользователя
+
+        :param role: Роль (по-умолчанию USER)
+        :param verified: Верифицирован (по-умолчанию True)
+        :param banned: Забанен (по-умолчанию False)
+        :param kwargs: Переопределения любых полей
+        :return: Данные сгенерированного пользователя
+        """
+
+        # Используются дефолтные данные, если не указаны другие
+        role = role if role is not None else cls.DEFAULT_ROLE
+        verified = verified if verified is not None else cls.DEFAULT_VERIFIED
+        banned = banned if banned is not None else cls.DEFAULT_BANNED
+
+        password = DataGenerator.generate_random_password()
+        # Генерация данных
+        data = {
+            "email": DataGenerator.generate_random_email(),
+            "fullName": DataGenerator.generate_random_name(),
+            "password": password,
+            "roles": [role],
+            "verified": verified,
+            "banned": banned
+        }
+
+        # Обновление данных кастомными
+        data.update(kwargs)
+
+        return data
+
+    @classmethod
+    def create_user_duble_password(cls, **kwargs):
+        """Данные для создания юзера с повторением пароля"""
+        data = cls.create(**kwargs)
+        data["passwordRepeat"] = data["password"]
+        return data
+
+
+    @classmethod
+    def create_admin(cls, **kwargs):
+        """Создаёт данные админа"""
+        return cls.create(role=Roles.ADMIN.value, **kwargs)
+
+    @classmethod
+    def create_super_admin(cls, **kwargs):
+        """Создаёт данные супер админа"""
+        return cls.create(role=Roles.SUPER_ADMIN.value, **kwargs)
+
+    @classmethod
+    def create_unverified_user(cls, **kwargs):
+        """Создаёт неидентифицированного юзера"""
+        return cls.create(verified=False, **kwargs)
+
+    @classmethod
+    def create_banned_user(cls, **kwargs):
+        """Создаёт забаненного юзера"""
+        return cls.create(banned=True, **kwargs)

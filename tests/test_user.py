@@ -3,6 +3,7 @@ from unittest import expectedFailure
 from faker import Faker
 import pytest
 import conftest
+from constants import Roles
 
 faker = Faker()
 
@@ -18,15 +19,27 @@ class TestUserAPI:
         #(conftest.creation_common_user, 403), - нужно проверить отдельно, чтобы не мешать положительные поверки с отрицательными
         #"creation_super_admin"
     #])
-    def test_create_user(self, creation_admin, creation_user_data):
+    def test_create_user(self, super_admin, creation_user_data, creation_user_factory):
         """
         Проверка сначала регистрации через существующего супер админа, а затем через все другие роли сгенерированные
         :param user_fixture_name:
-        :param creation_user_data:
+        :param creation_common_user:
         :return:
         """
 
-        response = creation_admin.api.user_api.create_user(creation_user_data).json()
+        test1 = creation_user_factory(roles=Roles.ADMIN.value)
+        email = test1.roles
+        test2 = creation_user_factory(roles=Roles.SUPER_ADMIN.value)
+        email2 = test2.roles
+        test3 = creation_user_factory()
+        email3 = test3.roles
+
+
+
+
+
+
+        response = super_admin.api.user_api.create_user(creation_user_data).json()
 
         assert response.get("id") and response["id"] != "", "ID должен быть не пустым"
         assert response.get('email') == creation_user_data['email']

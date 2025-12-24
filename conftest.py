@@ -1,6 +1,6 @@
 import requests
 import pytest
-from utils.data_generator import DataGenerator
+from utils.data_generator import DataGenerator, UserDataFactory
 from faker import Faker
 from api.api_manager import ApiManager
 from utils.movie_helpers import MovieHelper
@@ -14,19 +14,13 @@ faker = Faker()
 @pytest.fixture(scope="session")
 def test_user():
     """
-    Генерация случайного пользователя для тестов.
+    Фикстура-фабрика "Генерация случайного пользователя для тестов".
     """
-    random_email = DataGenerator.generate_random_email()
-    random_name = DataGenerator.generate_random_name()
-    random_password = DataGenerator.generate_random_password()
+    def create(**kwargs):
+        data = UserDataFactory.create_user_duble_password(**kwargs)
+        return data
 
-    return {
-        "email": random_email,
-        "fullName": random_name,
-        "password": random_password,
-        "passwordRepeat": random_password,
-        "roles": [Roles.USER.value]
-    }
+    return create
 
 
 @pytest.fixture(scope="session")
@@ -37,7 +31,7 @@ def registered_user(api_manager, test_user):
     response = api_manager.auth_api.login_user(test_user)
 
     response_data = response.json()
-    registered_user = test_user.copy()
+    registered_user = test_user()
     registered_user["id"] = response_data["user"]["id"]
     return registered_user
 
@@ -123,47 +117,42 @@ def super_admin(user_session):
     return super_admin_user
 
 
-# Фикстура формирования данных для создания пользователя
+
+# Фикстура-фабрика для формирования данных пользователя (без дублирования пароля)
+@pytest.fixture
+def user_data_factory():
+    def create(**kwargs):
+        user_data = UserDataFactory.create(**kwargs)
+        return user_data
+    return create
+
+
+# Фикстура формирования данных для создания пользователя для апи (без дублирования пароля)
 @pytest.fixture(scope="function")
-def creation_user_data(test_user):
-    # По сути берем все данные из test_user
-    # и дополняем необходимыми для создания нового юзера
-    # Обновляю ещё и логин, мыло, пароль, т.к. у test_user область видимости сессия,
-    # поэтому всегда создается один и тот же юзер в разных тестах
-
-    random_email = DataGenerator.generate_random_email()
-    random_name = DataGenerator.generate_random_name()
-    random_password = DataGenerator.generate_random_password()
-
-
-    user_data = test_user.copy()
-    user_data.update({
-        "email": random_email,
-        "fullName": random_name,
-        "password": random_password,
-        "passwordRepeat": random_password,
-        "verified": True,
-        "banned": False
-    })
+def creation_user_data(user_data_factory):
+    user_data = user_data_factory()
     return user_data
+
 
 ##############################################
 # Фикстуры для пользователей с разными ролями
 ##############################################
 
 # Создание обычного юзера с ролью USER
-@pytest.fixture
-def creation_common_user(user_session, super_admin, creation_user_data):
+'''@pytest.fixture
+def creation_common_user(user_session, super_admin, user_data_factory):
     new_session = user_session()
 
+    user_data = user_data_factory()
+
     common_user_data = User(
-        creation_user_data["email"],
-        creation_user_data["password"],
+        user_data["email"],
+        user_data["password"],
         [Roles.USER.value],
         new_session)
 
     # Создание юзера через админскую сессию
-    response_data = super_admin.api.user_api.create_user(creation_user_data).json
+    response_data = super_admin.api.user_api.create_user(user_data).json
 
     # добавление токена юзера в его сессию
     common_user_data.api.auth_api.authenticate(common_user_data.creds)
@@ -173,20 +162,83 @@ def creation_common_user(user_session, super_admin, creation_user_data):
     try:
         super_admin.api.user_api.delete_user(response_data["id"], expected_status=200)
     except Exception as e:
-        print(f"⚠️ Не удалось удалить пользователя {response_data['id']}: {e}")
+        print(f"Не удалось удалить пользователя {response_data['id']}: {e}")'''
+
+
+# Фикстура-фабрика создания юзеров
+@pytest.fixture
+def creation_user_factory(user_session, super_admin, user_data_factory):
+    """
+    Фабрика для создания пользователей с любыми ролями и данными
+    Для создания пользователя можно просто вызвать фикстуру, тогда создастся пользователь с рандомными данными и ролью USER
+    Можно указать конкретную роль и другие данные
+
+    Фикстура создает сессию, генерирует данные (используя кастомные, если они были введены, создает пользователя,
+    обновляет его роль на введенную (либо оставляет USER), добавляет токен пользователя в его сессию, возвращает данные.
+    Так же все созданные пользователи собираются в список creation_users и после тестирования удаляются
+
+    :param user_session:
+    :param super_admin:
+    :param user_data_factory:
+    :return:
+    """
+
+    created_users = []
+
+    def _create_user(roles=Roles.USER.value, **kwargs):
+        new_session = user_session()
+        user_data = user_data_factory(**kwargs)
+
+        # Создание юзера через супер-админа сессию
+        response_data = super_admin.api.user_api.create_user(user_data)
+        user_id = response_data.json()['id']
+
+        # Добавление id юзера и сессию в счётчик созданных для дальнейшего удаления
+        created_users.append((user_id, new_session))
+
+        # Обновление роли пользователя
+        patch_data = {"roles": [roles]}
+        response_patch = super_admin.api.user_api.patch_user(patch_data, user_id)
+
+        user = User(
+            user_data["email"],
+            user_data["password"],
+            [roles],
+            new_session)
+
+        # добавление токена юзера в его сессию
+        user.api.auth_api.authenticate(user.creds)
+
+        return user
+
+    yield _create_user
+
+    # Чистка после теста
+    for user_id, sessions in created_users:
+        try:
+            super_admin.api.user_api.delete_user(user_id, expected_status=200)
+            print("Тестовый пользователь успешно удалён")
+            sessions.close_session()
+        except Exception as e:
+            print(f"Не удалось удалить пользователя с id {user_id} из-за ошибки {e}")
+            
+        
 
 
 
 # Создание админа с ролью ADMIN
 @pytest.fixture
-def creation_admin(user_session, super_admin, creation_user_data):
-    new_session = user_session()
+def creation_admin(user_session, super_admin, user_data_factory, creation_common_user):
+    
+    admin_user_data = creation_common_user
+    
+    
+    
+    
+    
+    '''new_session = user_session()
 
-    admin_user_data = creation_user_data.copy()
-
-    # КОСТЫЛЬ. ПОКА НЕ СДЕЛАЮ ФАБРИКУ ДАННЫХ ЭТО БУДЕТ ПРЕДОТВРАЩАТЬ ОШИБКУ С ОДИНАКОВЫМИ ЕМАЙЛАМИ
-    random_email = DataGenerator.generate_random_email()
-    admin_user_data["email"] = random_email
+    admin_user_data = user_data_factory()
 
     # Создание через API пользователя
     response_create = super_admin.api.user_api.create_user(admin_user_data)
@@ -194,6 +246,7 @@ def creation_admin(user_session, super_admin, creation_user_data):
     # Вытаскивание id пользователя из ответа
     user_id = response_create.json()['id']
 
+    # Добавление роли админа, т.к. любой пользователь создается изначально с ролью USER
     patch_data = {"roles": [Roles.ADMIN.value]}
 
     # Изменение данных пользователя (теперь он имеет роль админа)
@@ -217,23 +270,23 @@ def creation_admin(user_session, super_admin, creation_user_data):
         super_admin.api.user_api.delete_user(user_id, expected_status=200)
         print("Тестовый админ успешно удалён")
     except Exception as e:
-        print(f"Не удалось удалить админа с id {user_id} из-за ошибки {e}")
+        print(f"Не удалось удалить админа с id {user_id} из-за ошибки {e}")'''
 
 
-# Создание супер-админа с ролью SUPER_ADMIN
-@pytest.fixture
-def creation_super_admin(user_session, super_admin, creation_user_data):
-    new_session = user_session()
-
-    super_admin_data = User(
-        creation_user_data["email"],
-        creation_user_data["password"],
-        [Roles.SUPER_ADMIN.value],
-        new_session
-    )
-
-    super_admin.api.user_api.create_user(creation_user_data)
-
-    super_admin_data.api.auth_api.authenticate(super_admin_data.creds)
-
-    return super_admin_data
+    '''# Создание супер-админа с ролью SUPER_ADMIN
+    @pytest.fixture
+    def creation_super_admin(user_session, super_admin, creation_user_data):
+        new_session = user_session()
+    
+        super_admin_data = User(
+            creation_user_data["email"],
+            creation_user_data["password"],
+            [Roles.SUPER_ADMIN.value],
+            new_session
+        )
+    
+        super_admin.api.user_api.create_user(creation_user_data)
+    
+        super_admin_data.api.auth_api.authenticate(super_admin_data.creds)
+    
+        return super_admin_data'''
