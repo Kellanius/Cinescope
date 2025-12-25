@@ -14,7 +14,7 @@ class MoviesAPI(CustomRequester):
             # БАЗОВЫЕ ФУНКЦИИ (ДЛЯ ПОЗИТИВНЫХ ПРОВЕРОК)
     ############################################################
 
-    def get_afisha_info(self, expected_status=200, **kwargs):
+    def get_movies(self, expected_status=200, **kwargs):
         """
         Получение афиш фильмов
         :param expected_status: Ожидаемый статус-код
@@ -59,7 +59,7 @@ class MoviesAPI(CustomRequester):
             expected_status=expected_status
         )
 
-    def patch_movie_info(self, movie_id, new_movie_data_for_patch, expected_status=200):
+    def patch_movie(self, movie_id, new_movie_data_for_patch, expected_status=200):
         """
         Создание нового фильма
         :param movie_id: id редактируемого фильма
