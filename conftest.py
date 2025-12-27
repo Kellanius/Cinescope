@@ -1,5 +1,7 @@
 import requests
 import pytest
+from pkg_resources import PkgResourcesDeprecationWarning
+
 from utils.data_generator import DataGenerator, UserDataFactory
 from faker import Faker
 from api.api_manager import ApiManager
@@ -14,10 +16,10 @@ faker = Faker()
 @pytest.fixture(scope="session")
 def test_user_factory():
     """
-    Фикстура-фабрика создания пользователей для тесирования регистрации (с дабл паролем)"
+    Фикстура-фабрика генерации пользовательских данных для регистрации (с дабл паролем)"
     """
     def create(**kwargs):
-        data = UserDataFactory.create_user_duble_password(**kwargs)
+        data = UserDataFactory.create_user_data_for_registered(**kwargs)
         return data
 
     return create
@@ -26,7 +28,7 @@ def test_user_factory():
 @pytest.fixture(scope="session")
 def creation_test_user(test_user_factory):
     """
-    Фикстура с готовыми данными пользователя для последующей регистрации
+    Готовые данные для регистрации пользователя, созданные через фабрику
     """
     test_user = test_user_factory()
     return test_user
@@ -35,7 +37,7 @@ def creation_test_user(test_user_factory):
 @pytest.fixture(scope="session")
 def registered_user(api_manager, creation_test_user):
     """
-    Фикстура для регистрации и получения данных зарегистрированного пользователя.
+    Регистрация и получение данных зарегистрированного пользователя.
     """
     response = api_manager.auth_api.login_user(creation_test_user)
 
@@ -62,29 +64,47 @@ def api_manager(session):
     """
     return ApiManager(session)
 
-
 @pytest.fixture(scope="function")
-def created_movie(super_admin):
+def create_movie_factory(super_admin):
     """
-    Фикстура для создания фильма
+    Фабрика создания фильма
     """
-    # генерация данных и создание фильма
-    movie_data, _ = MovieHelper.generate_data_and_create_movie(super_admin.api)
 
-    # возвращает данные созданного фильма
-    yield movie_data
+    created_movies = []
+
+    def _create_movie(expected_status=201, **kwargs):
+        # генерация данных и создание фильма
+        movie_data, _ = MovieHelper.generate_data_and_create_movie(super_admin.api, expected_status=expected_status, **kwargs)
+
+        created_movies.append(movie_data)
+
+        # возвращает данные созданного фильма
+        return movie_data
+
+    yield _create_movie
 
     # удаляет фильм после завершения функции, если он уже не удалён
-    try:
-        # Проверка, существует ли фильм всё ещё
-        super_admin.api.movies_api.get_movie(movie_data["id"], expected_status=200)
+    for movie in created_movies:
+        try:
+            # Проверка, существует ли фильм всё ещё
+            super_admin.api.movies_api.get_movie(movie["id"], expected_status=200)
 
-        # Если существует, удаляет его
-        MovieHelper.delete_movie_with_assert(super_admin.api, movie_data["id"])
+            # Если существует, удаляет его
+            MovieHelper.delete_movie_with_assert(super_admin.api, movie["id"])
 
-    # Если фильм не существует - пропускает
-    except (AssertionError, ValueError):
-        pass
+        # Если фильм не существует - пропускает
+        except (AssertionError, ValueError):
+            pass
+
+
+@pytest.fixture(scope="function")
+def created_movie(create_movie_factory):
+    """
+    Созданный фильм через фабрику
+    """
+    movie_data = create_movie_factory()
+    return movie_data
+
 
 
 @pytest.fixture
@@ -135,7 +155,7 @@ def super_admin(user_session):
 @pytest.fixture
 def user_data_factory():
     """
-    Фикстура-фабрика для формирования данных пользователя (без дублирования пароля)
+    Фикстура-фабрика генератор данных для создания пользователя через API (без дабл пароля, с полями 'verified' и 'banned')
     """
     def create(**kwargs):
         user_data = UserDataFactory.create(**kwargs)
@@ -207,3 +227,18 @@ def creation_user_factory(user_session, super_admin, user_data_factory):
             sessions.close_session()
         except Exception as e:
             print(f"Не удалось удалить пользователя с id {user_id} из-за ошибки {e}")
+
+
+
+# Все роли для параметризации
+ALL_ROLES = [role.value for role in Roles]
+
+@pytest.fixture(params=ALL_ROLES)
+def creation_user_by_role(request, creation_user_factory):
+    """
+    Универсальная параметризированная фикстура для тестирования функциональности по всем ролям
+    Если на проекте много ролей, то это удобнее, чем параметризировать руками каждый тест.
+    """
+    role = request.param
+    print(f'Проверяется функционал под ролью {role}')
+    return creation_user_factory(roles=role)

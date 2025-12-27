@@ -247,10 +247,12 @@ class UserDataFactory:
         return data
 
     @classmethod
-    def create_user_duble_password(cls, **kwargs):
-        """Данные для создания юзера с повторением пароля"""
+    def create_user_data_for_registered(cls, **kwargs):
+        """Данные для регистрации пользователя"""
         data = cls.create(**kwargs)
         data["passwordRepeat"] = data["password"]
+        data.pop("verified")
+        data.pop("banned")
         return data
 
 

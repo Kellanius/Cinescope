@@ -6,11 +6,15 @@ from utils.assert_helpers import CustomAssertions
 from faker import Faker
 import random
 from utils.movie_helpers import MovieHelper
+import pytest
 
 faker = Faker()
 
 
 class TestMovieAPI:
+    """
+    Класс для проверки работоспособности функционала эндпоинтов
+    """
 ############################################################
                     # ПОЗИТИВНЫЕ ПРОВЕРКИ
 ############################################################
@@ -44,11 +48,10 @@ class TestMovieAPI:
         # Проверка, что цены фильмов в афише попадают в фильтрационный диапазон рандомно сгенерированных параметров
         CustomAssertions.assert_afisha_prices_in_range(random_data_for_afisha_filter, afisha_data)
 
-    #####################################
-    # Создание/изменение/удаление фильма (переработать в несколько проверок)
-    #####################################
-    def test_create_edit_delete_movie(self, super_admin):
-        #### Создание фильма ####
+    def test_create_movie(self, super_admin):
+        """
+        Создание фильма
+        """
 
         # Генерация рандомных данных, создание фильма, получение данных о фильме с сайта (create_movie_data) и сгенерированных данных (random_data_for_new_movie)
         create_movie_data, random_data_for_new_movie = MovieHelper.generate_data_and_create_movie(super_admin.api)
@@ -57,20 +60,26 @@ class TestMovieAPI:
         get_movie_data = MovieHelper.get_movie_data(super_admin.api, create_movie_data["id"])
 
         # Проверки того, что данные из ответа совпадают с рандомно сгенерированными параметрами для фильма
-        CustomAssertions.assert_equals(random_data_for_new_movie, get_movie_data, "name", "price", "description", "location") # проверка названия, цены, описания, локации фильма
+        CustomAssertions.assert_equals(random_data_for_new_movie, get_movie_data, "name", "price", "description", "location")
+
+    def test_patch_movie(self, super_admin, created_movie):
+        """
+        Редактирование фильма
+        """
+
+        # Генерация и замена данных
+        patch_movie_data = MovieHelper.generate_data_and_patch_movie(super_admin.api, created_movie)
+
+        # Проверка изменения
+        CustomAssertions.assert_non_equals(patch_movie_data, created_movie, "name", "price", "description", "location")
 
 
-        #### Изменение фильма (PATCH) ####
+    def test_delete_movie(self, super_admin, created_movie):
+        """
+        Удаление фильма
+        """
 
-        # Генерация новых и замена старых данных. Получаем ответ в json формате об изменении данных
-        patch_movie_data = MovieHelper.generate_data_and_patch_movie(super_admin.api, get_movie_data)
-
-        # Проверка того что данные изменились после отправки запроса на PATCH
-        CustomAssertions.assert_non_equals(patch_movie_data, get_movie_data, "name", "price", "description", "location") # проверка, что название, цена, описание, локация изменились
-
-
-        #### Удаление фильма с проверкой ####
-        MovieHelper.delete_movie_with_assert(super_admin.api, get_movie_data["id"], expected_status=404)
+        MovieHelper.delete_movie_with_assert(super_admin.api, created_movie["id"], expected_status=404)
 
 
     ############################################################
@@ -84,6 +93,12 @@ class TestMovieAPI:
 
         MovieHelper.get_afisha(super_admin.api, data="random", correct_data=False, expected_status=400)
 
+    """@pytest.mark.parametryse("param","value","expected_status",
+                             [("price", "abc", 400),
+                              ("name", "", 400),
+                              ("location", "ABC", 400),
+                              ("data", {}, 400)
+                              ] )"""
 
     def test_create_incorrect_movie(self, super_admin, created_movie):
         """
@@ -140,3 +155,39 @@ class TestMovieAPI:
 
         ## Проверка PATCH в несуществующий айди из удалённого created_movie. Ожидается 404 ошибка
         MovieHelper.generate_data_and_patch_movie(super_admin.api, created_movie, expected_status=404)
+
+
+class TestMovieAPIByRoles:
+    """
+    Класс для проверки доступов и возможностей ролей
+    """
+
+    # На каждом уровне прав свой список ролей (если на одном уровне будет несколько ролей)
+
+    SUPER_ADMIN_RIGHTS = [const.Roles.SUPER_ADMIN.value]
+    ADMIN_RIGHTS = [const.Roles.ADMIN.value]
+    USER_RIGHTS = [const.Roles.USER.value]
+
+
+    def test_get_movies_info_with_default_params(self, creation_user_by_role):
+        """
+        Получение афиши без использования фильтров
+        """
+        MovieHelper.get_afisha(creation_user_by_role.api, data="default", expected_status=200)
+
+    def test_get_movies_info_with_random_params(self, creation_user_by_role):
+        """
+        Получение афиши с использованием фильтров
+        """
+        MovieHelper.get_afisha(creation_user_by_role.api, data="random", expected_status=200)
+
+    def test_create_movie(self, creation_user_by_role):
+        """
+        Создание фильма.
+        Только супер-админ может создать фильм.
+        """
+        if creation_user_by_role.roles[0] in TestMovieAPIByRoles.SUPER_ADMIN_RIGHTS:
+            MovieHelper.generate_data_and_create_movie(creation_user_by_role.api, expected_status=201)
+        else:
+            MovieHelper.generate_data_and_create_movie(creation_user_by_role.api, expected_status=403)
+
