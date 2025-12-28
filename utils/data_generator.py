@@ -87,6 +87,7 @@ class DataGenerator:
                 "minPrice": random.randint(1, 500),
                 "maxPrice": random.randint(100, 5000),
                 "published": True,
+                "locations": ["MSK", "SPB"],
                 "genreId": 1,
                 "createdAt": "asc"
             }
@@ -99,6 +100,7 @@ class DataGenerator:
                 "minPrice": random.randint(501, 5000),
                 "maxPrice": random.randint(1, 500),
                 "published": True,
+                "locations": ["MSK", "SPB"],
                 "genreId": 1,
                 "createdAt": "asc"
             }

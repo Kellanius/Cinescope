@@ -74,17 +74,3 @@ class CustomAssertions:
             else:
                 for i in var:
                     assert i in data, message
-
-
-
-
-    # Проверка того, что цены попадают в фильтрационный диапазон
-    @staticmethod
-    def assert_afisha_prices_in_range(filter_params, afisha_response):
-        """
-        :param filter_params: параметры фильтрации
-        :param afisha_response: это ответ от API с афишей
-        проверяет, попали ли все фильмы из afisha_response в ожидаемый диапазон цен из filter_params
-        """
-        assert filter_params["maxPrice"] >= MoviePriceAnalyzer.get_max_price(afisha_response), "В афишу попали фильмы с ценой больше, чем указано в фильтре"
-        assert filter_params["minPrice"] <= MoviePriceAnalyzer.get_min_price(afisha_response), "В афишу попали фильмы с ценой меньше, чем указано в фильтре"

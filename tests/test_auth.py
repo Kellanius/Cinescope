@@ -1,6 +1,6 @@
 import utils.data_generator as data_gener
 from utils.auth_data_builder import AuthDataBuilder
-from utils.assert_helpers import CustomAssertions
+from utils.assertions.assert_helpers import CustomAssertions
 
 
 class TestAuthAPI:

@@ -1,12 +1,11 @@
 import constants as const
 from utils.data_generator import DataGenerator
-from utils.auth_data_builder import AuthDataBuilder
-import secrets
-from utils.assert_helpers import CustomAssertions
+from utils.assertions.assert_helpers import CustomAssertions
 from faker import Faker
 import random
 from utils.movie_helpers import MovieHelper
 import pytest
+from utils.assertions.movie_assertions import MovieCustomAssertions
 
 faker = Faker()
 
@@ -19,34 +18,24 @@ class TestMovieAPI:
                     # ПОЗИТИВНЫЕ ПРОВЕРКИ
 ############################################################
 
-    def test_get_movies_info_with_default_params(self, super_admin):
+    @pytest.mark.parametrize("data_type", ["default", "random"], ids=["default params", "random params"])
+    @pytest.mark.parametrize("assert_function", [
+        MovieCustomAssertions.assert_afisha_prices_in_range,
+        MovieCustomAssertions.assert_afisha_page,
+        MovieCustomAssertions.assert_afisha_locations,
+        MovieCustomAssertions.assert_afisha_genreId
+    ], ids=["assert price in range", "assert afisha page", "assert location", "assert genre"])
+    def test_get_movies(self, super_admin, data_type, assert_function):
         """
         Получение афиши с параметрами по-умолчанию
         """
 
-        # Запрос на получение афиши с деволтными данными
-        afisha_data = MovieHelper.get_afisha(super_admin.api, data="default")
+        # Получение афиши
+        afisha_data, params = MovieHelper.get_afisha(super_admin.api, data=data_type)
 
-        # Сравнение инфы из полученного ответа с дефолтными параметрами для афиша фильтра
-        CustomAssertions.assert_equals(const.default_params_for_afisha_filter, afisha_data, "pageSize", "page")
+        # Проверки, что полученная афиша подходит под заданные параметры
+        assert_function(params, afisha_data)
 
-        # Проверка, что цены фильмов попадают в фильтрационный диапазон.
-        CustomAssertions.assert_afisha_prices_in_range(const.default_params_for_afisha_filter, afisha_data)
-
-
-    def test_get_movies_info_with_random_params(self, super_admin):
-        """
-        Получение афиш фильмов с рандомными параметрами
-        """
-
-        # Запрос на получение афиши с рандомными данными
-        afisha_data, random_data_for_afisha_filter = MovieHelper.get_afisha(super_admin.api, data="random")
-
-        # Проверка того, что данные в ответе совпадают со сгенерированными
-        CustomAssertions.assert_equals(random_data_for_afisha_filter, afisha_data, "pageSize", "page")
-
-        # Проверка, что цены фильмов в афише попадают в фильтрационный диапазон рандомно сгенерированных параметров
-        CustomAssertions.assert_afisha_prices_in_range(random_data_for_afisha_filter, afisha_data)
 
     def test_create_movie(self, super_admin):
         """
@@ -93,33 +82,31 @@ class TestMovieAPI:
 
         MovieHelper.get_afisha(super_admin.api, data="random", correct_data=False, expected_status=400)
 
-    """@pytest.mark.parametryse("param","value","expected_status",
-                             [("price", "abc", 400),
-                              ("name", "", 400),
-                              ("location", "ABC", 400),
-                              ("data", {}, 400)
-                              ] )"""
 
-    def test_create_incorrect_movie(self, super_admin, created_movie):
+    @pytest.mark.parametrize("kwargs,expected_status",
+                             [({"price": "abc"}, 400),
+                              ({"name": ""}, 400),
+                              ({"location": "ABC"}, 400)
+                              ], ids=["str in price", "empty name", "incorrect location"])
+    def test_create_incorrect_movie(self, super_admin, created_movie, expected_status, kwargs):
         """
         Создание фильма с некорректными данными
         """
 
-        # Текст вместо прайса
-        MovieHelper.generate_data_and_create_movie(super_admin.api, price="abc", expected_status=400)
+        MovieHelper.generate_data_and_create_movie(super_admin.api, **kwargs, expected_status=expected_status)
 
-        # Без названия
-        MovieHelper.generate_data_and_create_movie(super_admin.api, name="", expected_status=400)
 
-        # Несуществующий location
-        MovieHelper.generate_data_and_create_movie(super_admin.api, location="ABC", expected_status=400)
+    def test_create_movie_with_empty_data(self, super_admin):
+        """
+        Создание фильма без данных
+        """
+        super_admin.api.movies_api.create_new_movies({}, expected_status=400)
 
-        # Без данных
-        empty_data = {}
-        super_admin.api.movies_api.create_new_movies(empty_data, expected_status=400)
 
-        # С существующим именем
-        # Генерация корректных данных для фильма, но с тем же названием, что у уже созданного фильма (created_movie)
+    def test_create_movie_existing_name(self, super_admin, created_movie):
+        """
+        Создание фильма с существующим именем
+        """
         MovieHelper.generate_data_and_create_movie(super_admin.api, name=f"{created_movie['name']}", expected_status=409)
 
 
@@ -144,16 +131,16 @@ class TestMovieAPI:
         Редактирование фильма некорректными данными
         """
 
-        # Редактирование данных на некорректные (минусовый прайс)
         new_incorrect_price = random.randint(-1000, -1)
-
-        # Генерация новых данных, замена их старыми, изменение прайса на некорректный, отправка запроса. Ожидается 400 ошибка
         MovieHelper.generate_data_and_patch_movie(super_admin.api, created_movie, price=new_incorrect_price, expected_status=400)
 
-        # Удаление фильма
-        MovieHelper.delete_movie_with_assert(super_admin.api, created_movie["id"])
 
-        ## Проверка PATCH в несуществующий айди из удалённого created_movie. Ожидается 404 ошибка
+    def test_patch_in_deleted_movie(self, super_admin, created_movie):
+        """
+        Редактирование несуществующего фильма
+        """
+
+        MovieHelper.delete_movie_with_assert(super_admin.api, created_movie["id"])
         MovieHelper.generate_data_and_patch_movie(super_admin.api, created_movie, expected_status=404)
 
 

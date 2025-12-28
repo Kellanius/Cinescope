@@ -26,18 +26,7 @@ class MovieHelper:
 
         # Если data="random", то выводится афиша с рандомными фильтрами
         elif data == "random":
-
-            random_params = DataGenerator.generate_random_data_for_afisha_filter(correct_data=correct_data)
-
-            # Обновляем параметры данными введенными вручную
-            random_params.update(kwargs)
-
-            # Запрос на получение афиши
-            response = session.movies_api.get_movies(**random_params, expected_status=expected_status)
-
-            # Кроме самой афиши возвращает ещё и рандомные параметры
-            return response.json(), random_params
-
+            params = DataGenerator.generate_random_data_for_afisha_filter(correct_data=correct_data)
 
         # Если data это словарь, то выводится афиша с вставленными в словарь данными
         elif isinstance(data, dict):
@@ -54,7 +43,7 @@ class MovieHelper:
         # Запрос на получение афиши
         response = session.movies_api.get_movies(**params, expected_status=expected_status)
 
-        return response.json()
+        return response.json(), params
 
 
     # Генерация, создание фильма и перевод данных в json формат

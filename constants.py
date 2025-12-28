@@ -25,6 +25,7 @@ default_params_for_afisha_filter = {
     "page": 1,
     "minPrice": 1,
     "maxPrice": 1000,
+    "locations": ["MSK", "SPB"],
     "published": True,
     "genreId": 1,
     "createdAt": "asc"
