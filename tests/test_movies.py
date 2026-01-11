@@ -37,19 +37,29 @@ class TestMovieAPI:
         assert_function(params, afisha_data)
 
 
-    def test_create_movie(self, super_admin):
+    def test_create_movie(self, super_admin, db_helper):
         """
         Создание фильма
         """
 
         # Генерация рандомных данных, создание фильма, получение данных о фильме с сайта (create_movie_data) и сгенерированных данных (random_data_for_new_movie)
-        create_movie_data, random_data_for_new_movie = MovieHelper.generate_data_and_create_movie(super_admin.api)
+        create_movie_data, random_data_for_new_movie = MovieHelper.generate_data_and_create_movie(super_admin.api, db_helper)
 
-        # Проверка, что фильм создан и информация о нём приходит с сайта
+        # Проверка в БД, что фильм создан и информация о нём приходит с сайта
+        assert db_helper.get_movie_by_name(create_movie_data["name"]).name == random_data_for_new_movie["name"], "Фильм не создан в БД"
+
+        # Получение данных о фильме по API
         get_movie_data = MovieHelper.get_movie_data(super_admin.api, create_movie_data["id"])
 
         # Проверки того, что данные из ответа совпадают с рандомно сгенерированными параметрами для фильма
         CustomAssertions.assert_equals(random_data_for_new_movie, get_movie_data, "name", "price", "description", "location")
+
+        # Удаление фильма и проверка его отсутствия в БД
+        response_delete_movie = super_admin.api.movies_api.delete_movie(create_movie_data["id"])
+
+        # Проверка в БД, что фильм удалён
+        assert db_helper.get_movie_by_id(create_movie_data["id"]) is None, "Фильм не удалён из БД"
+
 
     def test_patch_movie(self, super_admin, created_movie):
         """
@@ -63,12 +73,12 @@ class TestMovieAPI:
         CustomAssertions.assert_non_equals(patch_movie_data, created_movie, "name", "price", "description", "location")
 
 
-    def test_delete_movie(self, super_admin, created_movie):
+    def test_delete_movie(self, super_admin, created_movie, db_helper):
         """
         Удаление фильма
         """
 
-        MovieHelper.delete_movie_with_assert(super_admin.api, created_movie["id"], expected_status=404)
+        MovieHelper.delete_movie_with_assert(super_admin.api, created_movie["id"], db_helper, expected_status=404)
 
 
     ############################################################

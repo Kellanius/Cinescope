@@ -6,9 +6,16 @@ from utils.data_generator import DataGenerator, UserDataFactory
 from faker import Faker
 from api.api_manager import ApiManager
 from utils.movie_helpers import MovieHelper
-from resurses.user_creds import SuperAdminCreds
+from resources.user_creds import SuperAdminCreds
 from entities.user import User
 from constants import Roles
+from sqlalchemy.orm import Session
+from db_requester.db_client import get_db_session
+from db_requester.db_helpers import DBHelper
+import pytest
+import allure
+import random
+import time
 
 
 faker = Faker()
@@ -65,7 +72,7 @@ def api_manager(session):
     return ApiManager(session)
 
 @pytest.fixture(scope="function")
-def create_movie_factory(super_admin):
+def create_movie_factory(super_admin, db_helper):
     """
     Фабрика создания фильма
     """
@@ -74,7 +81,7 @@ def create_movie_factory(super_admin):
 
     def _create_movie(expected_status=201, **kwargs):
         # генерация данных и создание фильма
-        movie_data, _ = MovieHelper.generate_data_and_create_movie(super_admin.api, expected_status=expected_status, **kwargs)
+        movie_data, _ = MovieHelper.generate_data_and_create_movie(super_admin.api, db_helper, expected_status=expected_status, **kwargs)
 
         created_movies.append(movie_data)
 
@@ -90,7 +97,7 @@ def create_movie_factory(super_admin):
             super_admin.api.movies_api.get_movie(movie["id"], expected_status=200)
 
             # Если существует, удаляет его
-            MovieHelper.delete_movie_with_assert(super_admin.api, movie["id"])
+            super_admin.api.movies_api.delete_movie(movie["id"])
 
         # Если фильм не существует - пропускает
         except (AssertionError, ValueError):
@@ -242,3 +249,46 @@ def creation_user_by_role(request, creation_user_factory):
     role = request.param
     print(f'Проверяется функционал под ролью {role}')
     return creation_user_factory(roles=role)
+
+
+# Фикстура для создания сессии БД
+@pytest.fixture(scope="module")
+def db_session() -> Session:
+    """
+    Фикстура, которая создает и возвращает сессию для работы с базой данных
+    После завершения теста сессия автоматически закрывается
+    """
+    db_session = get_db_session()
+    yield db_session
+    db_session.close()
+
+
+@pytest.fixture(scope="function")
+def db_helper(db_session) -> DBHelper:
+    """
+    Фикстура для экземпляра хелпера
+    """
+    db_helper = DBHelper(db_session)
+    return db_helper
+
+
+@pytest.fixture(scope="function")
+def created_test_user(db_helper):
+    """
+    Фикстура, которая создает тестового пользователя в БД
+    и удаляет его после завершения теста
+    """
+    user = db_helper.create_test_user(DataGenerator.generate_user_data_for_db())
+    yield user
+
+    # Cleanup после теста
+    if db_helper.get_user_by_id(user.id):
+        db_helper.delete_user(user)
+
+
+
+
+@pytest.fixture
+def delay_between_retries():
+    time.sleep(2)
+    yield

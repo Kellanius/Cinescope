@@ -2,6 +2,9 @@ import random
 import string
 from faker import Faker
 from constants import Roles
+from sqlalchemy import create_engine, Column, String, Boolean, DateTime, text
+from sqlalchemy.orm import declarative_base, sessionmaker
+import datetime
 
 faker = Faker()
 
@@ -207,6 +210,47 @@ class DataGenerator:
         return f"{random.randint(1000000, 2000000)}"
 
 
+    @staticmethod
+    def generate_user_data_for_db() -> dict:
+        """Генерирует данные для тестового пользователя для БД"""
+        from uuid import uuid4
+
+        return {
+            'id': f'{uuid4()}',  # генерируем UUID как строку
+            'email': DataGenerator.generate_random_email(),
+            'full_name': DataGenerator.generate_random_name(),
+            'password': DataGenerator.generate_random_password(),
+            'created_at': datetime.datetime.now(),
+            'updated_at': datetime.datetime.now(),
+            'verified': False,
+            'banned': False,
+            'roles': '{USER}'
+        }
+
+    @staticmethod
+    def generate_movie_data_for_db() -> dict:
+        """Генерирует данные фильма для БД"""
+        from uuid import uuid4
+
+        random_movie_name = DataGenerator.generate_random_name_for_movies()
+        random_movie_description = DataGenerator.generate_random_name_for_movies()
+
+        location = ["SPB", "MSK"]
+
+        return {
+            'id': random.randint(100000, 1000000),
+            'name': random_movie_name,
+            'price': random.randint(100, 10000),
+            'description': random_movie_description,
+            'image_url': f"https://image.url",
+            'location': random.choice(location),
+            'published': True,
+            'rating': random.uniform(1,10),
+            'genre_id': random.randint(1, 10),
+            'created_at': datetime.datetime.now()
+        }
+
+
 class UserDataFactory:
     """Фабрика для создания данных пользователей"""
 
@@ -277,3 +321,5 @@ class UserDataFactory:
     def create_banned_user(cls, **kwargs):
         """Создаёт забаненного юзера"""
         return cls.create(banned=True, **kwargs)
+
+
