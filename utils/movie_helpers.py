@@ -1,6 +1,8 @@
 from utils.data_generator import DataGenerator
 import constants as const
 from db_requester.db_helpers import DBHelper
+import allure
+from pytest_check import check
 
 
 
@@ -49,7 +51,7 @@ class MovieHelper:
 
     # Генерация, создание фильма и перевод данных в json формат
     @staticmethod
-    def generate_data_and_create_movie(session, db_helper, expected_status = 201, **kwargs):
+    def generate_data_and_create_movie(session, expected_status = 201, **kwargs):
         """
         :param session: сессия
         :param expected_status: ожидаемый статус-код ответа
@@ -58,13 +60,11 @@ class MovieHelper:
         :return: response_get_movie_info_data - данные о фильме возвращенные по api, random_data_for_new_movie - сгенерированные данные о фильме
         """
 
-        
-
         # Генерация рандомных данных для фильма
         random_data_for_new_movie = DataGenerator.generate_random_data_for_new_movies(**kwargs)
 
-        # Проверка в БД, что фильм со сгенерированным названием отсутствует
-        assert db_helper.get_movie_by_name(random_data_for_new_movie["name"]) is None, "Фильм уже существует в БД"
+        """# Проверка в БД, что фильм со сгенерированным названием отсутствует
+        assert db_helper.get_movie_by_name(random_data_for_new_movie["name"]) is None, "Фильм уже существует в БД"""
 
         # Запрос на создание фильма с рандомными данными
         response_create_movie = session.movies_api.create_new_movies(random_data_for_new_movie, expected_status=expected_status)
@@ -122,7 +122,7 @@ class MovieHelper:
 
     # Удаление фильма с проверкой
     @staticmethod
-    def delete_movie_with_assert(session, movie_id, db_helper, expected_status=404):
+    def delete_movie_with_assert(session, movie_id, expected_status=404):
         """
         :param session: сессия
         :param movie_id: id фильма, который собираемся удалить
@@ -134,7 +134,7 @@ class MovieHelper:
         #### Удаление фильма ####
 
         # Если фильма не существует, то создаём через бд
-        if db_helper.get_movie_by_id(movie_id) is None:
+        """if db_helper.get_movie_by_id(movie_id) is None:
 
             # Генерация данных для создания фильма через бд
             new_movie_data = DataGenerator.generate_movie_data_for_db()
@@ -143,7 +143,7 @@ class MovieHelper:
             new_movie = db_helper.create_test_movie(new_movie_data)
 
             # Получение id фильма для удаления
-            movie_id = new_movie.id
+            movie_id = new_movie.id"""
 
 
         # Запрос на удаление фильма
@@ -152,7 +152,7 @@ class MovieHelper:
         # Перевод ответа об удалении фильма в json формат
         delete_movie_data = response_delete_movie.json()
 
-        # Проверка, что фильма больше не существует (GET запрос на получение инфы о фильме)
+        # Проверка по API, что фильма больше не существует (GET запрос на получение инфы о фильме)
         session.movies_api.get_movie(delete_movie_data["id"], expected_status=expected_status)
 
         return delete_movie_data

@@ -5,6 +5,8 @@ from constants import Roles
 from sqlalchemy import create_engine, Column, String, Boolean, DateTime, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 import datetime
+from models.base_model import TestUser, RegisterUserResponse, TestMovieAPI, TestMovieDB
+from uuid import uuid4
 
 faker = Faker()
 
@@ -170,15 +172,17 @@ class DataGenerator:
 
         location = ["SPB", "MSK"]
 
-        random_data_for_new_movies = {
-            "name": random_movie_name,
-            "imageUrl": f"https://image.url",
-            "price": random.randint(1, 5000),
-            "description": random_movie_description,
-            "location": random.choice(location),
-            "published": True,
-            "genreId": 1
-        }
+        test_movie = TestMovieAPI(
+            name=random_movie_name,
+            price=random.randint(100, 10000),
+            description=random_movie_description,
+            imageUrl=f"https://image.url",
+            location=random.choice(location),
+            published=True,
+            genreId=random.randint(1, 3)
+        )
+
+        random_data_for_new_movies = test_movie.model_dump()
 
         random_data_for_new_movies.update(kwargs)
 
@@ -213,7 +217,6 @@ class DataGenerator:
     @staticmethod
     def generate_user_data_for_db() -> dict:
         """Генерирует данные для тестового пользователя для БД"""
-        from uuid import uuid4
 
         return {
             'id': f'{uuid4()}',  # генерируем UUID как строку
@@ -230,25 +233,28 @@ class DataGenerator:
     @staticmethod
     def generate_movie_data_for_db() -> dict:
         """Генерирует данные фильма для БД"""
-        from uuid import uuid4
 
         random_movie_name = DataGenerator.generate_random_name_for_movies()
         random_movie_description = DataGenerator.generate_random_name_for_movies()
 
         location = ["SPB", "MSK"]
 
-        return {
-            'id': random.randint(100000, 1000000),
-            'name': random_movie_name,
-            'price': random.randint(100, 10000),
-            'description': random_movie_description,
-            'image_url': f"https://image.url",
-            'location': random.choice(location),
-            'published': True,
-            'rating': random.uniform(1,10),
-            'genre_id': random.randint(1, 10),
-            'created_at': datetime.datetime.now()
-        }
+        test_movie = TestMovieDB(
+            id=random.randint(100000, 1000000),
+            name=random_movie_name,
+            price=random.randint(100, 10000),
+            description=random_movie_description,
+            image_url=f"https://image.url",
+            location=random.choice(location),
+            published=True,
+            rating=random.uniform(1,10),
+            genre_id=random.randint(1, 3),
+            created_at=datetime.datetime.now()
+        )
+
+        data = test_movie.model_dump()
+
+        return data
 
 
 class UserDataFactory:
@@ -277,15 +283,18 @@ class UserDataFactory:
         banned = banned if banned is not None else cls.DEFAULT_BANNED
 
         password = DataGenerator.generate_random_password()
+
         # Генерация данных
-        data = {
-            "email": DataGenerator.generate_random_email(),
-            "fullName": DataGenerator.generate_random_name(),
-            "password": password,
-            "roles": [role],
-            "verified": verified,
-            "banned": banned
-        }
+        test_user = TestUser(
+        email=DataGenerator.generate_random_email(),
+        fullName=DataGenerator.generate_random_name(),
+        password=password,
+        roles=[role],
+        verified=verified,
+        banned=banned
+        )
+
+        data = test_user.model_dump()
 
         # Обновление данных кастомными
         data.update(kwargs)

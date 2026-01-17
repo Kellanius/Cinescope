@@ -1,4 +1,5 @@
 from utils.price_utils import MoviePriceAnalyzer
+from pytest_check import check
 
 # Модуль для упрощения и сокращения ассертов
 class CustomAssertions:
@@ -22,14 +23,16 @@ class CustomAssertions:
         if args is None:
             if message is None:
                 message = f"Ожидалось {expectation}, фактически {actual}"
-            assert expectation == actual, message
+            with check:
+                assert expectation == actual, message
 
         # если args есть, то сравниваем ключи двух словарей
         else:
             for i in args:
                 if message is None:
                     message = f"Ожидалось {expectation}, фактически {actual}"
-                assert expectation[i] == actual[i], message
+                with check:
+                    assert expectation[i] == actual[i], message
 
 
     # Проверка того, что сравниваемые данные не равны
@@ -40,14 +43,16 @@ class CustomAssertions:
         if args is None:
             if message is None:
                 message = f"Ожидалось что {expectation} не совпадает с {actual}"
-            assert expectation != actual, message
+            with check:
+                assert expectation != actual, message
 
 
         else:
             for i in args:
                 if message is None:
                     message = f"Ожидалось что {expectation} не совпадает с {actual}"
-                assert expectation[i] != actual[i], message
+                with check:
+                    assert expectation[i] != actual[i], message
 
 
     # Проверка того, что одна или несколько переменных есть в данных
@@ -63,14 +68,17 @@ class CustomAssertions:
             if message is None:
                 message = f"Ожидалось что переменная {var} имеется в ответе {data}"
 
-            assert var in data, message
+            with check:
+                assert var in data, message
 
         # Если проверяем несколько переменных (список), то в каждая будет проверяться на наличие в данных
         if isinstance(var, list):
             if message is None:
                 for i in var:
                     message = f"Ожидалось что переменная {i} имеется в ответе {data}"
-                    assert i in data, message
+                    with check:
+                        assert i in data, message
             else:
                 for i in var:
-                    assert i in data, message
+                    with check:
+                        assert i in data, message

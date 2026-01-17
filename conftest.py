@@ -72,7 +72,7 @@ def api_manager(session):
     return ApiManager(session)
 
 @pytest.fixture(scope="function")
-def create_movie_factory(super_admin, db_helper):
+def create_movie_factory(super_admin):
     """
     Фабрика создания фильма
     """
@@ -81,7 +81,7 @@ def create_movie_factory(super_admin, db_helper):
 
     def _create_movie(expected_status=201, **kwargs):
         # генерация данных и создание фильма
-        movie_data, _ = MovieHelper.generate_data_and_create_movie(super_admin.api, db_helper, expected_status=expected_status, **kwargs)
+        movie_data, _ = MovieHelper.generate_data_and_create_movie(super_admin.api, expected_status=expected_status, **kwargs)
 
         created_movies.append(movie_data)
 
