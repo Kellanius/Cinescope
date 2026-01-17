@@ -13,9 +13,21 @@ class TestUser(BaseModel):
     fullName: str
     password: str
     """passwordRepeat: str = Field(..., min_length=1, max_length=20, description="Пароли должны совпадать")"""
-    roles: list[Roles] = [Roles.USER]
+    roles: List[Roles] = Field(default_factory=lambda: Roles.USER, min_length=1)
     verified: Optional[bool] = True
     banned: Optional[bool] = False
+
+    @field_validator("email")
+    def check_email(cls, v):
+        if not "@" in v:
+            raise ValueError("email должен содержать символ @")
+        return v
+
+    @field_validator("password")
+    def check_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Пароль должен содержать не меньше 8 символов")
+        return v
 
     """@field_validator("passwordRepeat")
     def check_password_repeat(cls, value: str, info) -> str:
