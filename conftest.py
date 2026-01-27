@@ -1,6 +1,10 @@
 import requests
 import pytest
 from pkg_resources import PkgResourcesDeprecationWarning
+import pytest
+from playwright.sync_api import sync_playwright
+from common.tools import Tools
+
 
 from utils.data_generator import DataGenerator, UserDataFactory
 from faker import Faker
@@ -16,8 +20,13 @@ import pytest
 import allure
 import random
 import time
+import os
+from playwright_helpers.po_login import CinescopeLoginPage
 
 
+
+
+#os.environ["PWDEBUG"] = "0"
 faker = Faker()
 
 @pytest.fixture(scope="session")
@@ -41,17 +50,20 @@ def creation_test_user(test_user_factory):
     return test_user
 
 
-@pytest.fixture(scope="session")
-def registered_user(api_manager, creation_test_user):
+@pytest.fixture(scope="function")
+def registered_user(super_admin, creation_test_user):
     """
     Регистрация и получение данных зарегистрированного пользователя.
     """
-    response = api_manager.auth_api.login_user(creation_test_user)
-
+    response = super_admin.api.auth_api.register_user(creation_test_user)
     response_data = response.json()
-    registered_user = creation_test_user
-    registered_user["id"] = response_data["user"]["id"]
-    return registered_user
+
+    registered_user_data = {"email": creation_test_user["email"],
+                       "password": creation_test_user["password"],
+                       "id": response_data["id"]
+                       }
+    yield registered_user_data
+    super_admin.api.user_api.delete_user(registered_user_data["id"])
 
 
 @pytest.fixture(scope="session")
@@ -292,3 +304,44 @@ def created_test_user(db_helper):
 def delay_between_retries():
     time.sleep(2)
     yield
+
+
+
+
+
+
+####################### Фикстуры для UI тестов ##################################
+DEFAULT_UI_TIMEOUT = 30000  # Пример значения таймаута
+
+
+@pytest.fixture(scope="session")  # Браузер запускается один раз для всей сессии
+def browser(playwright):
+    browser = playwright.chromium.launch(headless=False)  # headless=True для CI/CD, headless=False для локальной разработки
+    yield browser  # yield возвращает значение фикстуры, выполнение теста продолжится после yield
+    browser.close()  # Браузер закрывается после завершения всех тестов
+
+
+@pytest.fixture(scope="function")  # Контекст создается для каждого теста
+def context(browser):
+    context = browser.new_context()
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    context.set_default_timeout(DEFAULT_UI_TIMEOUT)
+    yield context
+    log_name = f"trace_{Tools.get_timestamp()}.zip"
+    trace_path = Tools.files_dir('playwright_trace', log_name)
+    context.tracing.stop(path=trace_path)
+    context.close()
+
+
+@pytest.fixture(scope="function")  # Страница создается для каждого теста
+def page(context):
+    page = context.new_page()
+    yield page  # yield возвращает значение фикстуры, выполнение теста продолжится после yield
+    page.close()  # Страница закрывается после завершения теста
+
+
+@pytest.fixture(scope="function")
+def login_page(page):
+    # Создание экземпляра класса
+    login_page = CinescopeLoginPage(page)
+    return login_page

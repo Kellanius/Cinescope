@@ -3,3 +3,4 @@ requests
 faker
 python-dotenv
 sqlalchemy
+playwright
