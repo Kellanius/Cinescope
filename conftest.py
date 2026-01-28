@@ -21,7 +21,7 @@ import allure
 import random
 import time
 import os
-from playwright_helpers.po_login import CinescopeLoginPage
+from playwright_helpers.page_object import CinescopeLoginPage, CinescopeMoviePage
 
 
 
@@ -311,17 +311,17 @@ def delay_between_retries():
 
 
 ####################### Фикстуры для UI тестов ##################################
-DEFAULT_UI_TIMEOUT = 30000  # Пример значения таймаута
+DEFAULT_UI_TIMEOUT = 10000
 
 
-@pytest.fixture(scope="session")  # Браузер запускается один раз для всей сессии
+@pytest.fixture(scope="session")
 def browser(playwright):
     browser = playwright.chromium.launch(headless=False)  # headless=True для CI/CD, headless=False для локальной разработки
-    yield browser  # yield возвращает значение фикстуры, выполнение теста продолжится после yield
-    browser.close()  # Браузер закрывается после завершения всех тестов
+    yield browser
+    browser.close()
 
 
-@pytest.fixture(scope="function")  # Контекст создается для каждого теста
+@pytest.fixture(scope="function")
 def context(browser):
     context = browser.new_context()
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
@@ -333,11 +333,11 @@ def context(browser):
     context.close()
 
 
-@pytest.fixture(scope="function")  # Страница создается для каждого теста
+@pytest.fixture(scope="function")
 def page(context):
     page = context.new_page()
-    yield page  # yield возвращает значение фикстуры, выполнение теста продолжится после yield
-    page.close()  # Страница закрывается после завершения теста
+    yield page
+    page.close()
 
 
 @pytest.fixture(scope="function")
@@ -345,3 +345,50 @@ def login_page(page):
     # Создание экземпляра класса
     login_page = CinescopeLoginPage(page)
     return login_page
+
+
+@pytest.fixture(scope="function")
+def auth_context(browser, registered_user):
+    """
+    Контекст с авторизованным пользователем.
+    """
+    # Логинимся один раз за сессию
+    auth_ctxt = browser.new_context()
+    auth_pg = auth_ctxt.new_page()
+
+
+    auth_pg.goto("https://dev-cinescope.coconutqa.ru/login")
+    auth_pg.fill('input[name="email"]', registered_user["email"])
+    auth_pg.fill('input[name="password"]', registered_user["password"])
+    auth_pg.locator("form").get_by_role("button", name="Войти").click()
+    notification_locator = auth_pg.get_by_text("Вы вошли в аккаунт")
+    notification_locator.wait_for(state="visible")
+
+    # ================================
+
+    # Сохранение куки в память
+    storage_state = auth_ctxt.storage_state()
+
+    # Закрытие временного контекста
+    auth_pg.close()
+    auth_ctxt.close()
+
+    # Создание основного контекста с сохранённой авторизацией
+    auth_context = browser.new_context(
+        storage_state=storage_state,
+        viewport={'width': 1920, 'height': 1080}
+    )
+    auth_context.set_default_timeout(10000)
+
+    yield auth_context
+
+    # После всех тестов контекст закроется сам
+    auth_context.close()
+
+
+@pytest.fixture(scope="function")
+def auth_page(auth_context):
+    """Страница с уже авторизованным пользователем"""
+    a_page = auth_context.new_page()
+    yield a_page
+    a_page.close()

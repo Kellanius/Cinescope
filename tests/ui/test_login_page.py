@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import time
-from playwright_helpers.po_login import CinescopeLoginPage
+from playwright_helpers.page_object import CinescopeLoginPage
 
 
 def test_login_page(registered_user, login_page):

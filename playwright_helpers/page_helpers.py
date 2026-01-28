@@ -14,16 +14,21 @@ class PageAction:
 
     @allure.step("Ввод текста '{text}' в поле '{locator}'")
     def enter_text_to_element(self, locator, text: str):
-        # Если у объекта есть метод fill – он будет вызываться
-        if hasattr(locator, "fill"):
-            locator.fill(text)
-        else:
-            # Иначе считается, что это строка-селектор
+        if isinstance(locator, str):
             self.page.fill(locator, text)
+        else:
+            locator.fill(text)
 
-    @allure.step("Клик по элементу '{locator}'")
-    def click_element(self, locator: str):
-        self.page.click(locator)
+    @allure.step("Клик по элементу {locator}")
+    def click_element(self, locator):
+        if isinstance(locator, str):
+            self.page.click(locator)
+        else:
+            locator.click()
+
+    @allure.step("Выбор элемента в выпадающем списке '{locator}'")
+    def select_element(self, locator: str, value):
+        self.page.select_option(locator, value)
 
     @allure.step("Ожидание загрузки страницы: {url}")
     def wait_redirect_for_url(self, url: str):
@@ -37,6 +42,10 @@ class PageAction:
     @allure.step("Ожидание появления или исчезновения элемента: {locator}, state = {state}")
     def wait_for_element(self, locator: str, state: str = "visible"):
         self.page.locator(locator).wait_for(state=state)
+
+    @allure.step("Получение элемента по тексту '{text} exact=True'")
+    def get_element_by_text(self, text, exact_value=True):
+        self.page.get_by_text(text, exact=exact_value)
 
     @allure.step("Скриншот текущей страницы")
     def make_screenshot_and_attach_to_allure(self):
