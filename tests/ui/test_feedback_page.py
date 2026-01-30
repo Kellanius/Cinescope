@@ -17,7 +17,7 @@ import pytest
 @pytest.mark.ui_movie
 class TestMoviePage:
     @allure.title("Тестирование отзывов")
-    def test_make_movie_feedback(self, auth_page, registered_user, created_movie):
+    def test_make_movie_feedback(self, auth_page, created_movie):
         movie_page = CinescopeMoviePage(auth_page, created_movie["id"])
 
         movie_page.open()
