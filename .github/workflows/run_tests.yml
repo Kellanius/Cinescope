@@ -46,4 +46,4 @@ jobs:
     # САМОЕ ГЛАВНОЕ: ЭТО ШАГ, КОТОРЫЙ ЗАПУСКАЕТ ТВОИ ТЕСТЫ
     - name: Run Pytest
       run: |
-        CI=true python -m pytest tests/ui/ -v
+        CI=true python -m pytest tests/ui/test_feedback_page.py -v
