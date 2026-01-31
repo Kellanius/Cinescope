@@ -21,6 +21,16 @@ jobs:
         pip install -r requirements.txt
         pip install pytest
 
+    - name: Install Playwright Browsers
+      run: |
+        # Установка системных зависимостей, необходимых для работы браузеров
+        sudo apt-get update
+        sudo apt-get install -y libwoff1 libopus0 libwebp6 libwebpdemux2 libenchant-2-2 libgudev-1.0-0 libsecret-1-0 libhyphen0 libgles2 libgstreamer-gl1.0-0 libgstreamer-plugins-bad1.0-0 gstreamer1.0-plugins-good gstreamer1.0-libav
+        # Команда playwright install скачивает и устанавливает сами браузеры (Chromium, Firefox, WebKit)
+        playwright install chromium
+        # Можно добавить playwright install --with-deps для автоматической установки системных зависимостей,
+        # но явная установка (как выше) часто надёжнее.
+
     - name: Create .env file from Secrets
       run: |
         # Создаём или перезаписываем файл .env и записываем в него переменные
@@ -41,4 +51,4 @@ jobs:
     # САМОЕ ГЛАВНОЕ: ЭТО ШАГ, КОТОРЫЙ ЗАПУСКАЕТ ТВОИ ТЕСТЫ
     - name: Run Pytest
       run: |
-        python -m pytest tests/ui/ -v
+        CI=true python -m pytest tests/ui/ -v
