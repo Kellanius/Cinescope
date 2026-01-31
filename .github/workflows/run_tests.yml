@@ -21,7 +21,29 @@ jobs:
         pip install -r requirements.txt
         pip install pytest
 
+    - name: Install Playwright Browsers
+      run: |
+        # Одна команда устанавливает и браузер, и все необходимые системные зависимости
+        playwright install --with-deps chromium
+
+    - name: Create .env file from Secrets
+      run: |
+        # Создаём или перезаписываем файл .env и записываем в него переменные
+        # Каждая переменная будет выглядеть так: DB_MOVIES_HOST=80.90.191.123
+        cat << EOF > .env
+        DB_MOVIES_HOST=${{ secrets.DB_MOVIES_HOST }}
+        DB_MOVIES_PORT=${{ secrets.DB_MOVIES_PORT }}
+        DB_MOVIES_NAME=${{ secrets.DB_MOVIES_NAME }}
+        DB_MOVIES_USERNAME=${{ secrets.DB_MOVIES_USERNAME }}
+        DB_MOVIES_PASSWORD=${{ secrets.DB_MOVIES_PASSWORD }}
+        SUPER_ADMIN_USERNAME=${{ secrets.SUPER_ADMIN_USERNAME }}
+        SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }}
+        EOF
+
+        echo "=== Проверка .env файла (пароли скрыты) ==="
+        sed 's/PASSWORD=.*/PASSWORD=******/g' .env
+
     # САМОЕ ГЛАВНОЕ: ЭТО ШАГ, КОТОРЫЙ ЗАПУСКАЕТ ТВОИ ТЕСТЫ
     - name: Run Pytest
       run: |
-        python -m pytest tests/ui/ -v # Эта команда запустит ВСЕ тесты в папке tests/
+        CI=true python -m pytest tests/ui/ -v
