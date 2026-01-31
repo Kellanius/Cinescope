@@ -1,11 +1,7 @@
+import os
+
 import requests
-import pytest
-from pkg_resources import PkgResourcesDeprecationWarning
-import pytest
-from playwright.sync_api import sync_playwright
 from common.tools import Tools
-
-
 from utils.data_generator import DataGenerator, UserDataFactory
 from faker import Faker
 from api.api_manager import ApiManager
@@ -17,10 +13,7 @@ from sqlalchemy.orm import Session
 from db_requester.db_client import get_db_session
 from db_requester.db_helpers import DBHelper
 import pytest
-import allure
-import random
 import time
-import os
 from playwright_helpers.page_object import CinescopeLoginPage, CinescopeMoviePage
 
 
@@ -316,7 +309,8 @@ DEFAULT_UI_TIMEOUT = 10000
 
 @pytest.fixture(scope="session")
 def browser(playwright):
-    browser = playwright.chromium.launch(headless=False)  # headless=True для CI/CD, headless=False для локальной разработки
+    is_ci = os.getenv('CI') == 'true'
+    browser = playwright.chromium.launch(headless=is_ci if is_ci is not None else True)  # headless=True для CI/CD, headless=False для локальной разработки
     yield browser
     browser.close()
 
