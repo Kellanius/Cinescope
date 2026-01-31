@@ -9,9 +9,6 @@ from utils.movie_helpers import MovieHelper
 from resources.user_creds import SuperAdminCreds
 from entities.user import User
 from constants import Roles
-from sqlalchemy.orm import Session
-from db_requester.db_client import get_db_session
-from db_requester.db_helpers import DBHelper
 import pytest
 import time
 from playwright_helpers.page_object import CinescopeLoginPage, CinescopeMoviePage
@@ -258,7 +255,9 @@ def creation_user_by_role(request, creation_user_factory):
 
 # Фикстура для создания сессии БД
 @pytest.fixture(scope="module")
-def db_session() -> Session:
+def db_session():
+    from sqlalchemy.orm import Session
+    from db_requester.db_client import get_db_session
     """
     Фикстура, которая создает и возвращает сессию для работы с базой данных
     После завершения теста сессия автоматически закрывается
@@ -269,10 +268,11 @@ def db_session() -> Session:
 
 
 @pytest.fixture(scope="function")
-def db_helper(db_session) -> DBHelper:
+def db_helper(db_session):
     """
     Фикстура для экземпляра хелпера
     """
+    from db_requester.db_helpers import DBHelper
     db_helper = DBHelper(db_session)
     return db_helper
 
