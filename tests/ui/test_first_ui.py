@@ -1,5 +1,4 @@
 import re
-from Tools.scripts.generate_opcode_h import footer
 from playwright.sync_api import Page, expect
 import time
 from random import randint
