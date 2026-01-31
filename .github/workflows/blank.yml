@@ -24,4 +24,4 @@ jobs:
     # САМОЕ ГЛАВНОЕ: ЭТО ШАГ, КОТОРЫЙ ЗАПУСКАЕТ ТВОИ ТЕСТЫ
     - name: Run Pytest
       run: |
-        python -m pytest tests/ui -v # Эта команда запустит ВСЕ тесты в папке tests/
+        python -m pytest tests/ui/ -v # Эта команда запустит ВСЕ тесты в папке tests/
