@@ -77,7 +77,7 @@ pipeline {
                     venv\\Scripts\\python.exe --version
                     venv\\Scripts\\python.exe -m pytest --version
                     echo "=== Проверка: pytest видит плагин ==="
-                    venv\\Scripts\\python.exe -c "import sys; sys.path.insert(0, ''); import pytest; import testit_adapter_pytest.plugin; print('Плагин найден:', hasattr(testit_adapter_pytest.plugin, 'pytest_configure'))"
+                    venv\\Scripts\\python.exe -c "import sys; sys.path.insert(0, ''); import pytest; import testit_adapter_pytest.plugin; print('Plugin found:', hasattr(testit_adapter_pytest.plugin, 'pytest_configure'))"
                     echo "=== Создаём заглушку testit.py ==="
                     echo "from testit_adapter_pytest import *" > testit.py
                 """
@@ -115,7 +115,7 @@ pipeline {
                         echo "=== Проверка: entry points pytest плагинов ==="
                         venv\\Scripts\\python.exe -c "import pkg_resources; eps = list(pkg_resources.iter_entry_points('pytest11')); print('Found', len(eps), 'pytest plugins'); [print('  -', ep.name, 'from', ep.module_name) for ep in eps if 'testit' in ep.name.lower()]"
                         echo "=== Проверка: доступность плагина через импорт ==="
-                        venv\\Scripts\\python.exe -c "import testit_adapter_pytest; print('Плагин импортирован успешно')" || echo "Ошибка импорта плагина!"
+                        venv\\Scripts\\python.exe -c "import testit_adapter_pytest; print('Plugin imported OK')" || echo "Plugin import failed!"
                         echo "=== Проверка: pytest видит опции плагина ==="
                         venv\\Scripts\\python.exe -m pytest --help 2>&1 | findstr /C:"tms" || echo "Плагин testit не найден в списке опций pytest!"
                         echo "=== Важно: tmsTestPlanId передается через connection_config.ini, а не через CLI аргумент ==="
