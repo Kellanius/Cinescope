@@ -78,6 +78,14 @@ pipeline {
         }
     }
 
+        stage('Debug testit module') {
+        steps {
+            bat '''
+                "${env.PYTHON}" -c "import testit; print(dir(testit))"
+            '''
+        }
+    }
+
     post {
         always {
             echo '🏁 Сборка завершена.'
