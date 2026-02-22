@@ -88,22 +88,13 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                script {
-                    // Формируем команду динамически
-                    def testitArgs = "--testit"
-                    if (params.TEST_RUN_ID) {
-                        testitArgs += " --testit-test-run-id=${params.TEST_RUN_ID}"
-                    }
-                    if (params.TEST_PLAN_ID) {
-                        testitArgs += " --testit-test-plan-id=${params.TEST_PLAN_ID}"
-                    }
-
-                    bat """
-                        "${env.PYTHON}" -m pytest tests/ ${testitArgs}
-                    """
-                }
+                echo '🚀 Запускаем тесты с адаптером Test IT...'
+                bat """
+                    "${env.PYTHON}" -m pytest tests/ --testit --testit-test-run-id=${params.TEST_RUN_ID} --testit-test-plan-id=${params.TEST_PLAN_ID}
+                """
             }
         }
+    }
 
     post {
         always {
