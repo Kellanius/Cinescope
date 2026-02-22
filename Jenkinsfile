@@ -50,7 +50,9 @@ pipeline {
                     "C:\\Python314\\python.exe" -m venv venv
                     call venv\\Scripts\\activate.bat
                     python -m pip install --upgrade pip
-                    pip install pytest testit-adapter-pytest allure-pytest playwright faker
+                    pip uninstall testit-adapter-pytest -y
+                    pip install testit-adapter-pytest==3.12.1
+                    pip install pytest allure-pytest playwright faker
                     pip install -r requirements.txt
                     playwright install
                     echo "=== Проверка: плагин testit-adapter-pytest установлен ==="
