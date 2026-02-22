@@ -14,7 +14,6 @@ pipeline {
         stage('Find Python') {
             steps {
                 script {
-                    // Ищем Python там, где он реально лежит
                     def possiblePaths = [
                         "C:\\Python314\\python.exe",
                         "C:\\Users\\Kellanius\\PycharmProjects\\Cinescope\\.venv\\Scripts\\python.exe",
@@ -28,10 +27,7 @@ pipeline {
                         }
                     }
                     if (!pythonPath) {
-                        error("""
-                            Python не найден. Проверь пути в списке possiblePaths.
-                            Сейчас ищем: ${possiblePaths}
-                        """)
+                        error("Python не найден. Проверь пути: ${possiblePaths}")
                     }
                     env.PYTHON = pythonPath
                     echo "✅ Используется Python: ${env.PYTHON}"
@@ -41,11 +37,12 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                echo '📦 Ставим зависимости...'
+                echo '📦 Устанавливаем зависимости...'
                 bat """
                     "${env.PYTHON}" -m pip install --upgrade pip
-                    "${env.PYTHON}" -m pip install pytest testit-pytest
+                    "${env.PYTHON}" -m pip install pytest testit-pytest allure-pytest playwright faker
                     "${env.PYTHON}" -m pip install -r requirements.txt
+                    "${env.PYTHON}" -m playwright install
                 """
             }
         }
@@ -58,7 +55,6 @@ pipeline {
                     string(credentialsId: 'testit-project-id', variable: 'PROJECT_ID'),
                     string(credentialsId: 'testit-config-id', variable: 'CONFIG_ID')
                 ]) {
-                    // Создаём testit.ini в корне проекта
                     bat """
                         echo [testit] > testit.ini
                         echo url = %URL% >> testit.ini
@@ -73,9 +69,9 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo '🚀 Запускаем тесты...'
+                echo '🚀 Запускаем тесты с подробным выводом...'
                 bat """
-                    "${env.PYTHON}" -m pytest tests/ --testit
+                    "${env.PYTHON}" -m pytest tests/ --testit -v --tb=short
                 """
             }
         }
@@ -83,7 +79,7 @@ pipeline {
 
     post {
         always {
-            echo '🏁 Сборка завершена. Результаты улетели в Test IT.'
+            echo '🏁 Сборка завершена. Проверь логи выше.'
         }
     }
 }
