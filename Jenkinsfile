@@ -38,7 +38,7 @@ pipeline {
                             "C:\\Program Files\\Python310\\python.exe",
                             "C:\\Program Files\\Python311\\python.exe",
                             "C:\\Program Files (x86)\\Python39\\python.exe",
-                            "C:\\Python114\\python.exe"
+                            "C:\\Python314\\python.exe"
                         ]
                         pythonPath = null
                         for (path in possiblePaths) {
