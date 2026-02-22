@@ -7,11 +7,10 @@ pipeline {
     }
 
     environment {
-        // Корень проекта — будет использоваться для PYTHONPATH
         PROJECT_ROOT = "%WORKSPACE%"
     }
 
-        stages {
+    stages {
         stage('Checkout') {
             steps {
                 echo 'Клонируем репозиторий...'
@@ -38,6 +37,7 @@ pipeline {
                         echo adapterMode = 0 >> connection_config.ini
                     """
                     echo "✅ Файл connection_config.ini успешно создан (режим 0)"
+                    bat "type connection_config.ini"
                 }
             }
         }
@@ -77,6 +77,8 @@ pipeline {
                     "${env.PYTHON}" -c "import testit; print('✅ Модуль testit доступен по пути:', testit.__file__)" || echo "❌ Модуль testit НЕ найден"
                     echo "=== Список установленных пакетов ==="
                     "${env.PYTHON}" -m pip list | findstr testit
+                    echo "=== Создаем заглушку для модуля testit ==="
+                    echo "from testit_adapter_pytest import *" > testit.py
                 """
             }
         }
@@ -101,7 +103,7 @@ pipeline {
 
                     bat """
                         set PYTHONPATH=%WORKSPACE%
-                        "${env.PYTHON}" -m pytest ${params.TEST_PATH} ${args}
+                        "${env.PYTHON}" -m pytest tests ${args}
                     """
                 }
             }
