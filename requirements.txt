@@ -32,3 +32,6 @@ typing-inspection
 typing_extensions
 tzdata
 urllib3
+testit-api-client
+testit-cli
+testit-pytest
