@@ -11,7 +11,7 @@ pipeline {
         PROJECT_ROOT = "%WORKSPACE%"
     }
 
-    stages {
+        stages {
         stage('Checkout') {
             steps {
                 echo 'Клонируем репозиторий...'
@@ -65,14 +65,6 @@ pipeline {
             }
         }
 
-        stage('Clear pytest cache') {
-            steps {
-                bat """
-                    "${env.PYTHON}" -m pytest --cache-clear
-                """
-            }
-        }
-
         stage('Setup Environment') {
             steps {
                 echo '📦 Устанавливаем зависимости...'
@@ -87,12 +79,19 @@ pipeline {
             }
         }
 
+        stage('Clear pytest cache') {
+            steps {
+                bat """
+                    "${env.PYTHON}" -m pytest --cache-clear
+                """
+            }
+        }
+
         stage('Run Tests') {
             steps {
                 script {
                     def args = "--testit -v --tb=short"
 
-                    // Эти параметры приходят из вебхука Test IT
                     if (params.TEST_RUN_ID) {
                         args += " --tmsTestRunId=${params.TEST_RUN_ID}"
                     }
