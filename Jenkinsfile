@@ -19,7 +19,7 @@ pipeline {
         stage('Find Python') {
             steps {
                 script {
-                    // Сначала пробуем найти Python через PowerShell (ищет в PATH)
+                    // Поиск Python в PATH
                     def pythonPath = powershell(
                         returnStdout: true,
                         script: 'Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path'
@@ -28,7 +28,7 @@ pipeline {
                     if (pythonPath) {
                         env.PYTHON = pythonPath
                     } else {
-                        // Если не нашли в PATH, проверяем самые частые места установки
+                        // Стандартные пути установки
                         def possiblePaths = [
                             "C:\\Python39\\python.exe",
                             "C:\\Python310\\python.exe",
@@ -50,13 +50,7 @@ pipeline {
                         if (pythonPath) {
                             env.PYTHON = pythonPath
                         } else {
-                            error('''
-                                ⛔ Python не найден автоматически.
-                                Возможные решения:
-                                1. Установите Python и добавьте его в системную переменную PATH, затем перезапустите службу Jenkins.
-                                2. Если Python уже установлен в нестандартном месте, добавьте его путь в список possiblePaths в этом Jenkinsfile.
-                                3. Временно укажите полный путь к python.exe вручную (например, "C:\\путь\\к\\python.exe").
-                            ''')
+                            error('Python не найден. Установите Python в C:\\Python314 или добавьте в PATH.')
                         }
                     }
                     echo "✅ Используется Python: ${env.PYTHON}"
@@ -66,9 +60,20 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                echo '📦 Устанавливаем зависимости...'
+                echo '📦 Устанавливаем pip и зависимости...'
                 bat """
+                    "${env.PYTHON}" -m pip install --upgrade pip
                     "${env.PYTHON}" -m pip install -r requirements.txt
+                    "${env.PYTHON}" -m pip install testit-pytest
+                """
+            }
+        }
+
+        stage('Check packages') {
+            steps {
+                echo '📋 Список установленных пакетов:'
+                bat """
+                    "${env.PYTHON}" -m pip list
                 """
             }
         }
@@ -85,10 +90,10 @@ pipeline {
                     bat """
                         "${env.PYTHON}" -m pytest tests/ ^
                         --testit ^
-                        --testit-url=${TESTIT_URL} ^
-                        --testit-private-token=${TESTIT_TOKEN} ^
-                        --testit-project-id=${TESTIT_PROJECT_ID} ^
-                        --testit-configuration-id=${TESTIT_CONFIG_ID} ^
+                        --testit-url=%TESTIT_URL% ^
+                        --testit-private-token=%TESTIT_TOKEN% ^
+                        --testit-project-id=%TESTIT_PROJECT_ID% ^
+                        --testit-configuration-id=%TESTIT_CONFIG_ID% ^
                         --testit-test-run-id=${params.TEST_RUN_ID} ^
                         --testit-test-plan-id=${params.TEST_PLAN_ID}
                     """
