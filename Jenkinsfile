@@ -84,7 +84,12 @@ pipeline {
                     bat """
                         call venv\\Scripts\\activate.bat
                         set PYTHONPATH=%WORKSPACE%
-                        python -m pytest tests ${args}
+                        echo "=== Проверка: какой Python используется ==="
+                        where python
+                        echo "=== Проверка: плагин testit-adapter-pytest доступен ==="
+                        venv\\Scripts\\python.exe -m pytest --collect-only --testit 2>&1 | findstr /C:"tmsTestPlanId" || echo "Плагин не найден!"
+                        echo "=== Запуск тестов ==="
+                        venv\\Scripts\\python.exe -m pytest tests ${args}
                     """
                 }
             }
