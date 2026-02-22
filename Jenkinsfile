@@ -19,7 +19,7 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 echo 'Устанавливаем зависимости...'
-                sh 'pip install -r requirements.txt'
+                bat 'pip install -r requirements.txt'
             }
         }
 
@@ -32,7 +32,7 @@ pipeline {
                     string(credentialsId: 'testit-project-id', variable: 'TESTIT_PROJECT_ID'),
                     string(credentialsId: 'testit-config-id', variable: 'TESTIT_CONFIG_ID')
                 ]) {
-                    sh """
+                    bat """
                         pytest tests/ \\
                             --testit \\
                             --testit-url=${TESTIT_URL} \\
