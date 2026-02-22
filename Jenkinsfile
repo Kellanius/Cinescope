@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    parameters {
-        string(name: 'TEST_PLAN_ID', defaultValue: '', description: 'ID тест-плана из Test IT')
-        string(name: 'TEST_RUN_ID', defaultValue: '', description: 'ID прогона из Test IT')
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -19,38 +14,26 @@ pipeline {
         stage('Find Python') {
             steps {
                 script {
-                    def pythonPath = powershell(
-                        returnStdout: true,
-                        script: 'Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path'
-                    ).trim()
-
-                    if (pythonPath) {
-                        env.PYTHON = pythonPath
-                    } else {
-                        def possiblePaths = [
-                            "C:\\Python39\\python.exe",
-                            "C:\\Python310\\python.exe",
-                            "C:\\Python311\\python.exe",
-                            "C:\\Python38\\python.exe",
-                            "C:\\Program Files\\Python39\\python.exe",
-                            "C:\\Program Files\\Python310\\python.exe",
-                            "C:\\Program Files\\Python311\\python.exe",
-                            "C:\\Program Files (x86)\\Python39\\python.exe",
-                            "C:\\Python314\\python.exe"
-                        ]
-                        pythonPath = null
-                        for (path in possiblePaths) {
-                            if (fileExists(path)) {
-                                pythonPath = path
-                                break
-                            }
-                        }
-                        if (pythonPath) {
-                            env.PYTHON = pythonPath
-                        } else {
-                            error('Python не найден. Установите Python в C:\\Python314 или добавьте в PATH.')
+                    // Ищем Python там, где он реально лежит
+                    def possiblePaths = [
+                        "C:\\Python314\\python.exe",
+                        "C:\\Users\\Kellanius\\PycharmProjects\\Cinescope\\.venv\\Scripts\\python.exe",
+                        "C:\\Users\\Kellanius\\AppData\\Local\\Programs\\Python\\Python311\\python.exe"
+                    ]
+                    def pythonPath = null
+                    for (path in possiblePaths) {
+                        if (fileExists(path)) {
+                            pythonPath = path
+                            break
                         }
                     }
+                    if (!pythonPath) {
+                        error("""
+                            Python не найден. Проверь пути в списке possiblePaths.
+                            Сейчас ищем: ${possiblePaths}
+                        """)
+                    }
+                    env.PYTHON = pythonPath
                     echo "✅ Используется Python: ${env.PYTHON}"
                 }
             }
@@ -58,10 +41,11 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                echo '📦 Устанавливаем зависимости...'
+                echo '📦 Ставим зависимости...'
                 bat """
                     "${env.PYTHON}" -m pip install --upgrade pip
-                    "${env.PYTHON}" -m pip install pytest testit-pytest -r requirements.txt
+                    "${env.PYTHON}" -m pip install pytest testit-pytest
+                    "${env.PYTHON}" -m pip install -r requirements.txt
                 """
             }
         }
@@ -74,6 +58,7 @@ pipeline {
                     string(credentialsId: 'testit-project-id', variable: 'PROJECT_ID'),
                     string(credentialsId: 'testit-config-id', variable: 'CONFIG_ID')
                 ]) {
+                    // Создаём testit.ini в корне проекта
                     bat """
                         echo [testit] > testit.ini
                         echo url = %URL% >> testit.ini
@@ -88,9 +73,9 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo '🚀 Запускаем тесты с адаптером Test IT...'
+                echo '🚀 Запускаем тесты...'
                 bat """
-                    "${env.PYTHON}" -m pytest tests/ --testit --testit-test-run-id=${params.TEST_RUN_ID} --testit-test-plan-id=${params.TEST_PLAN_ID}
+                    "${env.PYTHON}" -m pytest tests/ --testit
                 """
             }
         }
@@ -98,7 +83,7 @@ pipeline {
 
     post {
         always {
-            echo '🏁 Сборка завершена. Результаты отправлены в Test IT.'
+            echo '🏁 Сборка завершена. Результаты улетели в Test IT.'
         }
     }
 }
