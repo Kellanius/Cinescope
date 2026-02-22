@@ -36,7 +36,7 @@ pipeline {
                         echo configurationId = %CONFIG_ID% >> connection_config.ini
                         echo adapterMode = 0 >> connection_config.ini
                     """
-                    echo "✅ Файл connection_config.ini успешно создан (режим 0)"
+                    echo "✅ Файл connection_config.ini успешно создан"
                     bat "type connection_config.ini"
                 }
             }
@@ -70,7 +70,8 @@ pipeline {
                 echo '📦 Устанавливаем зависимости...'
                 bat """
                     "${env.PYTHON}" -m pip install --upgrade pip
-                    "${env.PYTHON}" -m pip install pytest testit-adapter-pytest allure-pytest playwright faker
+                    "${env.PYTHON}" -m pip uninstall testit-adapter-pytest -y
+                    "${env.PYTHON}" -m pip install pytest testit-adapter-pytest==2.5.2 allure-pytest playwright faker
                     "${env.PYTHON}" -m pip install -r requirements.txt
                     "${env.PYTHON}" -m playwright install
                     echo "=== Создаём заглушку testit.py ==="
@@ -98,8 +99,8 @@ pipeline {
                     }
 
                     bat """
-                    set PYTHONPATH=%WORKSPACE%
-                    "${env.PYTHON}" -m pytest -p testit_adapter_pytest tests ${args}
+                        set PYTHONPATH=%WORKSPACE%
+                        "${env.PYTHON}" -m pytest tests ${args}
                     """
                 }
             }
@@ -108,7 +109,7 @@ pipeline {
 
     post {
         always {
-            echo '🏁 Сборка завершена. Результаты отправлены в Test IT.'
+            echo '🏁 Сборка завершена.'
         }
     }
 }
