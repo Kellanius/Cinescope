@@ -47,7 +47,6 @@ pipeline {
             }
         }
 
-        // ✅ Вот он — правильный этап создания connection_config.ini
         stage('Create TestIT Config') {
             steps {
                 withCredentials([
@@ -76,13 +75,13 @@ pipeline {
                 """
             }
         }
-    }
 
         stage('Debug testit module') {
-        steps {
-            bat '''
-                "${env.PYTHON}" -c "import testit; print(dir(testit))"
-            '''
+            steps {
+                bat """
+                    "${env.PYTHON}" -c "import testit; print(dir(testit))"
+                """
+            }
         }
     }
 
