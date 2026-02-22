@@ -19,7 +19,6 @@ pipeline {
         stage('Find Python') {
             steps {
                 script {
-                    // Поиск Python в PATH
                     def pythonPath = powershell(
                         returnStdout: true,
                         script: 'Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path'
@@ -28,7 +27,6 @@ pipeline {
                     if (pythonPath) {
                         env.PYTHON = pythonPath
                     } else {
-                        // Стандартные пути установки
                         def possiblePaths = [
                             "C:\\Python39\\python.exe",
                             "C:\\Python310\\python.exe",
@@ -63,52 +61,37 @@ pipeline {
                 echo '📦 Устанавливаем зависимости...'
                 bat """
                     "${env.PYTHON}" -m pip install --upgrade pip
-                    "${env.PYTHON}" -m pip install --upgrade pytest
-                    "${env.PYTHON}" -m pip install --upgrade testit-pytest
-                    "${env.PYTHON}" -m pip install -r requirements.txt
+                    "${env.PYTHON}" -m pip install pytest testit-pytest -r requirements.txt
                 """
             }
         }
 
-        stage('Verify TestIT plugin') {
+        stage('Create testit.ini') {
             steps {
-                echo '🔍 Проверяем, что testit-pytest установлен и виден:'
-                bat """
-                    "${env.PYTHON}" -m pip show testit-pytest || exit /b 1
-                    "${env.PYTHON}" -m pytest --help | findstr testit || (echo "Плагин testit-pytest не загружен!" && exit /b 1)
-                """
-            }
-        }
-
-        stage('Check packages') {
-            steps {
-                echo '📋 Список установленных пакетов:'
-                bat """
-                    "${env.PYTHON}" -m pip list
-                """
+                withCredentials([
+                    string(credentialsId: 'testit-url', variable: 'URL'),
+                    string(credentialsId: 'testit-token', variable: 'TOKEN'),
+                    string(credentialsId: 'testit-project-id', variable: 'PROJECT_ID'),
+                    string(credentialsId: 'testit-config-id', variable: 'CONFIG_ID')
+                ]) {
+                    bat """
+                        echo [testit] > testit.ini
+                        echo url = %URL% >> testit.ini
+                        echo privateToken = %TOKEN% >> testit.ini
+                        echo projectId = %PROJECT_ID% >> testit.ini
+                        echo configurationId = %CONFIG_ID% >> testit.ini
+                        echo testRunName = Autotest Run from Jenkins >> testit.ini
+                    """
+                }
             }
         }
 
         stage('Run Tests') {
             steps {
                 echo '🚀 Запускаем тесты с адаптером Test IT...'
-                withCredentials([
-                    string(credentialsId: 'testit-url', variable: 'TESTIT_URL'),
-                    string(credentialsId: 'testit-token', variable: 'TESTIT_TOKEN'),
-                    string(credentialsId: 'testit-project-id', variable: 'TESTIT_PROJECT_ID'),
-                    string(credentialsId: 'testit-config-id', variable: 'TESTIT_CONFIG_ID')
-                ]) {
-                    bat """
-                        "${env.PYTHON}" -m pytest tests/ ^
-                        --testit ^
-                        --testit-url=%TESTIT_URL% ^
-                        --testit-private-token=%TESTIT_TOKEN% ^
-                        --testit-project-id=%TESTIT_PROJECT_ID% ^
-                        --testit-configuration-id=%TESTIT_CONFIG_ID% ^
-                        --testit-test-run-id=${params.TEST_RUN_ID} ^
-                        --testit-test-plan-id=${params.TEST_PLAN_ID}
-                    """
-                }
+                bat """
+                    "${env.PYTHON}" -m pytest tests/ --testit --testit-test-run-id=${params.TEST_RUN_ID} --testit-test-plan-id=${params.TEST_PLAN_ID}
+                """
             }
         }
     }
