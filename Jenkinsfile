@@ -83,9 +83,7 @@ pipeline {
 
         stage('Clear pytest cache') {
             steps {
-                bat """
-                    "${env.PYTHON}" -m pytest --cache-clear
-                """
+                bat 'if exist .pytest_cache rmdir /s /q .pytest_cache'
             }
         }
 
