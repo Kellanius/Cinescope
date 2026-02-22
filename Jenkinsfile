@@ -63,11 +63,11 @@ pipeline {
                     echo "=== Установка testit-adapter-pytest ==="
                     pip uninstall testit-adapter-pytest -y
                     pip install --no-cache-dir --force-reinstall testit-adapter-pytest==3.12.1
-                    echo "=== Проверка: плагин зарегистрирован в pytest ==="
-                    venv\\Scripts\\python.exe -c "import pkg_resources; plugins = [ep.name for ep in pkg_resources.iter_entry_points('pytest11')]; print('Pytest plugins:', plugins); print('testit found:', any('testit' in p.lower() for p in plugins))"
                     echo "=== Установка остальных зависимостей ==="
                     pip install allure-pytest playwright faker
                     pip install -r requirements.txt
+                    echo "=== Обновление testit-api-client для совместимости с API (autoTestTags) ==="
+                    pip install --upgrade testit-api-client
                     playwright install
                     echo "=== Проверка: плагин testit-adapter-pytest установлен ==="
                     pip show testit-adapter-pytest
@@ -112,8 +112,6 @@ pipeline {
                         where python
                         echo "=== Проверка: плагин testit-adapter-pytest установлен ==="
                         venv\\Scripts\\pip.exe show testit-adapter-pytest
-                        echo "=== Проверка: entry points pytest плагинов ==="
-                        venv\\Scripts\\python.exe -c "import pkg_resources; eps = list(pkg_resources.iter_entry_points('pytest11')); print('Found', len(eps), 'pytest plugins'); [print('  -', ep.name, 'from', ep.module_name) for ep in eps if 'testit' in ep.name.lower()]"
                         echo "=== Проверка: доступность плагина через импорт ==="
                         venv\\Scripts\\python.exe -c "import testit_adapter_pytest; print('Plugin imported OK')" || echo "Plugin import failed!"
                         echo "=== Проверка: pytest видит опции плагина ==="
