@@ -69,12 +69,14 @@ pipeline {
             steps {
                 echo '📦 Устанавливаем зависимости...'
                 bat """
-                    "${env.PYTHON}" -m pip uninstall testit-pytest -y
                     "${env.PYTHON}" -m pip install --upgrade pip
                     "${env.PYTHON}" -m pip install pytest testit-adapter-pytest allure-pytest playwright faker
                     "${env.PYTHON}" -m pip install -r requirements.txt
-                    "${env.PYTHON}" -m pip uninstall testit-pytest -y
                     "${env.PYTHON}" -m playwright install
+                    echo "=== Проверка наличия модуля testit ==="
+                    "${env.PYTHON}" -c "import testit; print('✅ Модуль testit доступен по пути:', testit.__file__)" || echo "❌ Модуль testit НЕ найден"
+                    echo "=== Список установленных пакетов ==="
+                    "${env.PYTHON}" -m pip list | findstr testit
                 """
             }
         }
