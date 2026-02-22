@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    parameters {
+        string(name: 'TEST_PLAN_ID', defaultValue: '', description: 'ID тест-плана из Test IT (оставьте пустым для ручного запуска)')
+        string(name: 'TEST_RUN_ID', defaultValue: '', description: 'ID прогона из Test IT (обычно пусто)')
+        string(name: 'TEST_PATH', defaultValue: 'tests/', description: 'Путь к тестам (например, tests/ui/test_feedback_page.py или tests/ui/)')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -69,18 +75,23 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                echo '🚀 Запускаем тесты...'
-                bat """
-                    "${env.PYTHON}" -m pytest tests/ --testit -v --tb=short
-                """
-            }
-        }
+                script {
+                    // Базовые аргументы pytest
+                    def args = "--testit -v --tb=short"
 
-        stage('Debug testit module') {
-            steps {
-                bat """
-                    "${env.PYTHON}" -c "import testit; print(dir(testit))"
-                """
+                    // Добавляем параметры Test IT, если они заданы
+                    if (params.TEST_PLAN_ID) {
+                        args += " --testit-test-plan-id=${params.TEST_PLAN_ID}"
+                    }
+                    if (params.TEST_RUN_ID) {
+                        args += " --testit-test-run-id=${params.TEST_RUN_ID}"
+                    }
+
+                    // Запускаем тесты по указанному пути
+                    bat """
+                        "${env.PYTHON}" -m pytest ${params.TEST_PATH} ${args}
+                    """
+                }
             }
         }
     }
