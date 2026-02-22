@@ -8,6 +8,7 @@ pipeline {
 
     environment {
         PROJECT_ROOT = "%WORKSPACE%"
+        VENV = "%WORKSPACE%\\venv"
     }
 
     stages {
@@ -42,38 +43,18 @@ pipeline {
             }
         }
 
-        stage('Find Python') {
+        stage('Setup VirtualEnv') {
             steps {
-                script {
-                    def possiblePaths = [
-                        "C:\\Python314\\python.exe",
-                        "C:\\Users\\Kellanius\\PycharmProjects\\Cinescope\\.venv\\Scripts\\python.exe"
-                    ]
-                    def pythonPath = null
-                    for (path in possiblePaths) {
-                        if (fileExists(path)) {
-                            pythonPath = path
-                            break
-                        }
-                    }
-                    if (!pythonPath) {
-                        error("Python не найден. Пути: ${possiblePaths}")
-                    }
-                    env.PYTHON = pythonPath
-                    echo "✅ Используется Python: ${env.PYTHON}"
-                }
-            }
-        }
-
-        stage('Setup Environment') {
-            steps {
-                echo '📦 Устанавливаем зависимости...'
+                echo '🔧 Создаём виртуальное окружение...'
                 bat """
-                    "${env.PYTHON}" -m pip install --upgrade pip
-                    "${env.PYTHON}" -m pip uninstall testit-adapter-pytest -y
-                    "${env.PYTHON}" -m pip install pytest testit-adapter-pytest==2.5.2 allure-pytest playwright faker
-                    "${env.PYTHON}" -m pip install -r requirements.txt
-                    "${env.PYTHON}" -m playwright install
+                    "C:\\Python314\\python.exe" -m venv venv
+                    call venv\\Scripts\\activate.bat
+                    python -m pip install --upgrade pip
+                    pip install pytest testit-adapter-pytest allure-pytest playwright faker
+                    pip install -r requirements.txt
+                    playwright install
+                    echo "=== Проверка: плагин testit-adapter-pytest установлен ==="
+                    pip show testit-adapter-pytest
                     echo "=== Создаём заглушку testit.py ==="
                     echo "from testit_adapter_pytest import *" > testit.py
                 """
@@ -99,8 +80,9 @@ pipeline {
                     }
 
                     bat """
+                        call venv\\Scripts\\activate.bat
                         set PYTHONPATH=%WORKSPACE%
-                        "${env.PYTHON}" -m pytest tests ${args}
+                        python -m pytest tests ${args}
                     """
                 }
             }
