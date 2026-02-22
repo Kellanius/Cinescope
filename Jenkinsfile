@@ -70,15 +70,11 @@ pipeline {
                 echo '📦 Устанавливаем зависимости...'
                 bat """
                     "${env.PYTHON}" -m pip install --upgrade pip
-                    "${env.PYTHON}" -m pip uninstall testit-adapter-pytest -y
-                    "${env.PYTHON}" -m pip install pytest testit-adapter-pytest==2.5.2 allure-pytest playwright faker
+                    "${env.PYTHON}" -m pip install pytest testit-adapter-pytest allure-pytest playwright faker
                     "${env.PYTHON}" -m pip install -r requirements.txt
                     "${env.PYTHON}" -m playwright install
-                    echo "=== Проверка наличия модуля testit ==="
-                    "${env.PYTHON}" -c "import testit; print('✅ Модуль testit доступен по пути:', testit.__file__)" || echo "❌ Модуль testit НЕ найден"
-                    echo "=== Список установленных пакетов ==="
-                    "${env.PYTHON}" -m pip list | findstr testit
-                    "${env.PYTHON}" -c "import testit_adapter_pytest; print(f'✅ Версия адаптера: {testit_adapter_pytest.__version__}')"
+                    echo "=== Создаём заглушку testit.py ==="
+                    echo "from testit_adapter_pytest import *" > testit.py
                 """
             }
         }
