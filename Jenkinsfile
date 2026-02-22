@@ -60,11 +60,22 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
-                echo '📦 Устанавливаем pip и зависимости...'
+                echo '📦 Устанавливаем зависимости...'
                 bat """
                     "${env.PYTHON}" -m pip install --upgrade pip
+                    "${env.PYTHON}" -m pip install --upgrade pytest
+                    "${env.PYTHON}" -m pip install --upgrade testit-pytest
                     "${env.PYTHON}" -m pip install -r requirements.txt
-                    "${env.PYTHON}" -m pip install testit-pytest
+                """
+            }
+        }
+
+        stage('Verify TestIT plugin') {
+            steps {
+                echo '🔍 Проверяем, что testit-pytest установлен и виден:'
+                bat """
+                    "${env.PYTHON}" -m pip show testit-pytest || exit /b 1
+                    "${env.PYTHON}" -m pytest --help | findstr testit || (echo "Плагин testit-pytest не загружен!" && exit /b 1)
                 """
             }
         }
