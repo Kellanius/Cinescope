@@ -16,18 +16,65 @@ pipeline {
             }
         }
 
+        stage('Find Python') {
+            steps {
+                script {
+                    // Сначала пробуем найти Python через PowerShell (ищет в PATH)
+                    def pythonPath = powershell(
+                        returnStdout: true,
+                        script: 'Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Path'
+                    ).trim()
+
+                    if (pythonPath) {
+                        env.PYTHON = pythonPath
+                    } else {
+                        // Если не нашли в PATH, проверяем самые частые места установки
+                        def possiblePaths = [
+                            "C:\\Python39\\python.exe",
+                            "C:\\Python310\\python.exe",
+                            "C:\\Python311\\python.exe",
+                            "C:\\Python38\\python.exe",
+                            "C:\\Program Files\\Python39\\python.exe",
+                            "C:\\Program Files\\Python310\\python.exe",
+                            "C:\\Program Files\\Python311\\python.exe",
+                            "C:\\Program Files (x86)\\Python39\\python.exe"
+                        ]
+                        pythonPath = null
+                        for (path in possiblePaths) {
+                            if (fileExists(path)) {
+                                pythonPath = path
+                                break
+                            }
+                        }
+                        if (pythonPath) {
+                            env.PYTHON = pythonPath
+                        } else {
+                            error('''
+                                ⛔ Python не найден автоматически.
+                                Возможные решения:
+                                1. Установите Python и добавьте его в системную переменную PATH, затем перезапустите службу Jenkins.
+                                2. Если Python уже установлен в нестандартном месте, добавьте его путь в список possiblePaths в этом Jenkinsfile.
+                                3. Временно укажите полный путь к python.exe вручную (например, "C:\\путь\\к\\python.exe").
+                            ''')
+                        }
+                    }
+                    echo "✅ Используется Python: ${env.PYTHON}"
+                }
+            }
+        }
+
         stage('Setup Environment') {
             steps {
-                echo 'Проверим, что Python вообще доступен (для отладки)'
-                bat 'python --version'
-                echo 'Устанавливаем зависимости...'
-                bat 'python -m pip install -r requirements.txt'
+                echo '📦 Устанавливаем зависимости...'
+                bat """
+                    "${env.PYTHON}" -m pip install -r requirements.txt
+                """
             }
         }
 
         stage('Run Tests') {
             steps {
-                echo 'Запускаем тесты с адаптером Test IT...'
+                echo '🚀 Запускаем тесты с адаптером Test IT...'
                 withCredentials([
                     string(credentialsId: 'testit-url', variable: 'TESTIT_URL'),
                     string(credentialsId: 'testit-token', variable: 'TESTIT_TOKEN'),
@@ -35,7 +82,7 @@ pipeline {
                     string(credentialsId: 'testit-config-id', variable: 'TESTIT_CONFIG_ID')
                 ]) {
                     bat """
-                        python -m pytest tests/ ^
+                        "${env.PYTHON}" -m pytest tests/ ^
                         --testit ^
                         --testit-url=${TESTIT_URL} ^
                         --testit-private-token=${TESTIT_TOKEN} ^
@@ -51,7 +98,7 @@ pipeline {
 
     post {
         always {
-            echo 'Сборка завершена. Результаты отправлены в Test IT.'
+            echo '🏁 Сборка завершена. Результаты отправлены в Test IT.'
         }
     }
 }
