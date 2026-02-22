@@ -62,12 +62,18 @@ pipeline {
                     pip install pytest
                     echo "=== Установка testit-adapter-pytest ==="
                     pip uninstall testit-adapter-pytest -y
-                    pip install --no-cache-dir --force-reinstall testit-adapter-pytest==3.12.1
+                    echo "=== Проверка доступных версий testit-adapter-pytest ==="
+                    pip index versions testit-adapter-pytest 2>&1 | findstr "Available versions" || echo "Не удалось получить список версий"
+                    echo "=== Установка последней версии testit-adapter-pytest ==="
+                    pip install --no-cache-dir --upgrade testit-adapter-pytest
                     echo "=== Установка остальных зависимостей ==="
                     pip install allure-pytest playwright faker
                     pip install -r requirements.txt
-                    echo "=== Обновление testit-api-client для совместимости с API (autoTestTags) ==="
-                    pip install --upgrade testit-api-client
+                    echo "=== Обновление testit пакетов для совместимости с API (autoTestTags) ==="
+                    pip uninstall testit-api-client testit-python-commons -y
+                    pip install --no-cache-dir --upgrade testit-api-client testit-python-commons
+                    echo "=== Проверка версий testit пакетов ==="
+                    pip show testit-api-client testit-python-commons
                     playwright install
                     echo "=== Проверка: плагин testit-adapter-pytest установлен ==="
                     pip show testit-adapter-pytest
