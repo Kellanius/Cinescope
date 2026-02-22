@@ -47,7 +47,8 @@ pipeline {
             }
         }
 
-        stage('Create testit.ini') {
+        // ✅ Вот он — правильный этап создания connection_config.ini
+        stage('Create TestIT Config') {
             steps {
                 withCredentials([
                     string(credentialsId: 'testit-url', variable: 'URL'),
@@ -55,21 +56,21 @@ pipeline {
                     string(credentialsId: 'testit-project-id', variable: 'PROJECT_ID'),
                     string(credentialsId: 'testit-config-id', variable: 'CONFIG_ID')
                 ]) {
-                    bat """
-                        echo [testit] > testit.ini
-                        echo url = %URL% >> testit.ini
-                        echo privateToken = %TOKEN% >> testit.ini
-                        echo projectId = %PROJECT_ID% >> testit.ini
-                        echo configurationId = %CONFIG_ID% >> testit.ini
-                        echo testRunName = Autotest Run from Jenkins >> testit.ini
-                    """
+                    bat '''
+                        echo [testit] > connection_config.ini
+                        echo url = %URL% >> connection_config.ini
+                        echo privateToken = %TOKEN% >> connection_config.ini
+                        echo projectId = %PROJECT_ID% >> connection_config.ini
+                        echo configurationId = %CONFIG_ID% >> connection_config.ini
+                    '''
+                    echo "✅ Файл connection_config.ini успешно создан"
                 }
             }
         }
 
         stage('Run Tests') {
             steps {
-                echo '🚀 Запускаем тесты с подробным выводом...'
+                echo '🚀 Запускаем тесты...'
                 bat """
                     "${env.PYTHON}" -m pytest tests/ --testit -v --tb=short
                 """
@@ -79,7 +80,7 @@ pipeline {
 
     post {
         always {
-            echo '🏁 Сборка завершена. Проверь логи выше.'
+            echo '🏁 Сборка завершена.'
         }
     }
 }
