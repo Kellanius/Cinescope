@@ -21,6 +21,27 @@ pipeline {
             }
         }
 
+        stage('Create TestIT Config') {
+            steps {
+                withCredentials([
+                    string(credentialsId: 'testit-url', variable: 'URL'),
+                    string(credentialsId: 'testit-token', variable: 'TOKEN'),
+                    string(credentialsId: 'testit-project-id', variable: 'PROJECT_ID'),
+                    string(credentialsId: 'testit-config-id', variable: 'CONFIG_ID')
+                ]) {
+                    bat """
+                        echo [testit] > connection_config.ini
+                        echo url = %URL% >> connection_config.ini
+                        echo privateToken = %TOKEN% >> connection_config.ini
+                        echo projectId = %PROJECT_ID% >> connection_config.ini
+                        echo configurationId = %CONFIG_ID% >> connection_config.ini
+                        echo adapterMode = 0 >> connection_config.ini
+                    """
+                    echo "✅ Файл connection_config.ini успешно создан (режим 0)"
+                }
+            }
+        }
+
         stage('Find Python') {
             steps {
                 script {
@@ -89,10 +110,9 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    // Базовые аргументы
                     def args = "--testit -v --tb=short"
 
-                    // Добавляем ID тест-плана и прогона, если они переданы из Test IT
+                    // Эти параметры приходят из вебхука Test IT
                     if (params.TEST_RUN_ID) {
                         args += " --tmsTestRunId=${params.TEST_RUN_ID}"
                     }
@@ -101,13 +121,12 @@ pipeline {
                     }
 
                     bat """
-                        set PYTHONPATH=${PROJECT_ROOT}
-                        "${env.PYTHON}" -m pytest tests/ ${args}
+                        set PYTHONPATH=%WORKSPACE%
+                        "${env.PYTHON}" -m pytest ${params.TEST_PATH} ${args}
                     """
                 }
             }
         }
-    }
 
     post {
         always {
