@@ -81,6 +81,7 @@ pipeline {
                     "${env.PYTHON}" -m pip install --upgrade pip
                     "${env.PYTHON}" -m pip install pytest testit-adapter-pytest allure-pytest playwright faker
                     "${env.PYTHON}" -m pip install -r requirements.txt
+                    "${env.PYTHON}" -m pip uninstall testit-pytest -y
                     "${env.PYTHON}" -m playwright install
                 """
             }
