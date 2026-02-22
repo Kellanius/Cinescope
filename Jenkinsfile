@@ -2,9 +2,13 @@ pipeline {
     agent any
 
     parameters {
-        string(name: 'TEST_PLAN_ID', defaultValue: '', description: 'ID тест-плана из Test IT (оставьте пустым для ручного запуска)')
-        string(name: 'TEST_RUN_ID', defaultValue: '', description: 'ID прогона из Test IT (обычно пусто)')
-        string(name: 'TEST_PATH', defaultValue: 'tests/', description: 'Путь к тестам (например, tests/ui/test_feedback_page.py или tests/ui/)')
+        string(name: 'TEST_PLAN_ID', defaultValue: '', description: 'ID тест-плана из Test IT')
+        string(name: 'TEST_RUN_ID', defaultValue: '', description: 'ID прогона из Test IT')
+    }
+
+    environment {
+        // Корень проекта — будет использоваться для PYTHONPATH
+        PROJECT_ROOT = "%WORKSPACE%"
     }
 
     stages {
@@ -22,8 +26,7 @@ pipeline {
                 script {
                     def possiblePaths = [
                         "C:\\Python314\\python.exe",
-                        "C:\\Users\\Kellanius\\PycharmProjects\\Cinescope\\.venv\\Scripts\\python.exe",
-                        "C:\\Users\\Kellanius\\AppData\\Local\\Programs\\Python\\Python311\\python.exe"
+                        "C:\\Users\\Kellanius\\PycharmProjects\\Cinescope\\.venv\\Scripts\\python.exe"
                     ]
                     def pythonPath = null
                     for (path in possiblePaths) {
@@ -33,7 +36,7 @@ pipeline {
                         }
                     }
                     if (!pythonPath) {
-                        error("Python не найден. Проверь пути: ${possiblePaths}")
+                        error("Python не найден. Пути: ${possiblePaths}")
                     }
                     env.PYTHON = pythonPath
                     echo "✅ Используется Python: ${env.PYTHON}"
@@ -46,7 +49,7 @@ pipeline {
                 echo '📦 Устанавливаем зависимости...'
                 bat """
                     "${env.PYTHON}" -m pip install --upgrade pip
-                    "${env.PYTHON}" -m pip install pytest testit-pytest allure-pytest playwright faker
+                    "${env.PYTHON}" -m pip install pytest testit-adapter-pytest allure-pytest playwright faker
                     "${env.PYTHON}" -m pip install -r requirements.txt
                     "${env.PYTHON}" -m playwright install
                 """
@@ -61,14 +64,15 @@ pipeline {
                     string(credentialsId: 'testit-project-id', variable: 'PROJECT_ID'),
                     string(credentialsId: 'testit-config-id', variable: 'CONFIG_ID')
                 ]) {
-                    bat '''
+                    bat """
                         echo [testit] > connection_config.ini
                         echo url = %URL% >> connection_config.ini
                         echo privateToken = %TOKEN% >> connection_config.ini
                         echo projectId = %PROJECT_ID% >> connection_config.ini
                         echo configurationId = %CONFIG_ID% >> connection_config.ini
-                    '''
-                    echo "✅ Файл connection_config.ini успешно создан"
+                        echo adapterMode = 0 >> connection_config.ini
+                    """
+                    echo "✅ Файл connection_config.ini успешно создан (режим 0)"
                 }
             }
         }
@@ -76,20 +80,20 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    // Базовые аргументы pytest
+                    // Базовые аргументы
                     def args = "--testit -v --tb=short"
 
-                    // Добавляем параметры Test IT, если они заданы
-                    if (params.TEST_PLAN_ID) {
-                        args += " --testit-test-plan-id=${params.TEST_PLAN_ID}"
-                    }
+                    // Добавляем ID тест-плана и прогона, если они переданы из Test IT
                     if (params.TEST_RUN_ID) {
-                        args += " --testit-test-run-id=${params.TEST_RUN_ID}"
+                        args += " --tmsTestRunId=${params.TEST_RUN_ID}"
+                    }
+                    if (params.TEST_PLAN_ID) {
+                        args += " --tmsTestPlanId=${params.TEST_PLAN_ID}"
                     }
 
-                    // Запускаем тесты по указанному пути
                     bat """
-                        "${env.PYTHON}" -m pytest ${params.TEST_PATH} ${args}
+                        set PYTHONPATH=${PROJECT_ROOT}
+                        "${env.PYTHON}" -m pytest tests/ ${args}
                     """
                 }
             }
@@ -98,7 +102,7 @@ pipeline {
 
     post {
         always {
-            echo '🏁 Сборка завершена.'
+            echo '🏁 Сборка завершена. Результаты отправлены в Test IT.'
         }
     }
 }
