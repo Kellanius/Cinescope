@@ -4,6 +4,7 @@ logs/
 /temp/
 ?ogo.png
 /build/logs/
+testit.ini
 
 # Игнорировать все .pyc файлы
 *.pyc

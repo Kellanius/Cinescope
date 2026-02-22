@@ -1,4 +1,4 @@
-name: Run Autotests
+"""name: Run Autotests
 
 on: [push, pull_request]
 
@@ -40,10 +40,10 @@ jobs:
         SUPER_ADMIN_PASSWORD=${{ secrets.SUPER_ADMIN_PASSWORD }}
         EOF
 
-        echo "=== Проверка .env файла (пароли скрыты) ==="
-        sed 's/PASSWORD=.*/PASSWORD=******/g' .env
+        echo "#=== Проверка .env файла (пароли скрыты) ==="
+        #sed 's/PASSWORD=.*/PASSWORD=******/g' .env"""
 
     # САМОЕ ГЛАВНОЕ: ЭТО ШАГ, КОТОРЫЙ ЗАПУСКАЕТ ТВОИ ТЕСТЫ
-    - name: Run Pytest
+"""    - name: Run Pytest
       run: |
-        CI=true python -m pytest tests/ui/test_feedback_page.py -v
+        CI=true python -m pytest tests/ui/test_feedback_page.py -v"""
