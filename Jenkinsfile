@@ -18,8 +18,10 @@ pipeline {
 
         stage('Setup Environment') {
             steps {
+                echo 'Проверим, что Python вообще доступен (для отладки)'
+                bat 'python --version'
                 echo 'Устанавливаем зависимости...'
-                bat 'pip install -r requirements.txt'
+                bat 'python -m pip install -r requirements.txt'
             }
         }
 
@@ -33,14 +35,14 @@ pipeline {
                     string(credentialsId: 'testit-config-id', variable: 'TESTIT_CONFIG_ID')
                 ]) {
                     bat """
-                        pytest tests/ \\
-                            --testit \\
-                            --testit-url=${TESTIT_URL} \\
-                            --testit-private-token=${TESTIT_TOKEN} \\
-                            --testit-project-id=${TESTIT_PROJECT_ID} \\
-                            --testit-configuration-id=${TESTIT_CONFIG_ID} \\
-                            --testit-test-run-id=${params.TEST_RUN_ID} \\
-                            --testit-test-plan-id=${params.TEST_PLAN_ID}
+                        python -m pytest tests/ ^
+                        --testit ^
+                        --testit-url=${TESTIT_URL} ^
+                        --testit-private-token=${TESTIT_TOKEN} ^
+                        --testit-project-id=${TESTIT_PROJECT_ID} ^
+                        --testit-configuration-id=${TESTIT_CONFIG_ID} ^
+                        --testit-test-run-id=${params.TEST_RUN_ID} ^
+                        --testit-test-plan-id=${params.TEST_PLAN_ID}
                     """
                 }
             }
