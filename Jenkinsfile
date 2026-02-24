@@ -7,6 +7,7 @@ pipeline {
     }
 
     environment {
+        PYTHON = "C:\\python312\\python.exe"
         PROJECT_ROOT = "%WORKSPACE%"
         VENV = "%WORKSPACE%\\venv"
     }
@@ -55,37 +56,25 @@ pipeline {
             steps {
                 echo '🔧 Создаём виртуальное окружение...'
                 bat """
-                    "C:\\Python314\\python.exe" -m venv venv
+                    "%PYTHON%" -m venv venv
                     call venv\\Scripts\\activate.bat
                     python -m pip install --upgrade pip
-                    echo "=== Установка pytest сначала ==="
-                    pip install pytest
-                    echo "=== Установка testit-adapter-pytest ==="
-                    pip uninstall testit-adapter-pytest -y
-                    echo "=== Проверка доступных версий testit-adapter-pytest ==="
-                    pip index versions testit-adapter-pytest 2>&1 | findstr "Available versions" || echo "Не удалось получить список версий"
-                    echo "=== Установка последней версии testit-adapter-pytest ==="
-                    pip install --no-cache-dir --upgrade testit-adapter-pytest
+
+                    echo "=== Удаление старых версий testit-пакетов ==="
+                    pip uninstall testit-adapter-pytest testit-python-commons testit-api-client -y
+
+                    echo "=== Установка совместимых версий для Test IT 5.6 ==="
+                    pip install testit-api-client==6.5.0
+                    pip install testit-python-commons==3.11.0
+                    pip install testit-adapter-pytest==3.11.0
+
                     echo "=== Установка остальных зависимостей ==="
-                    pip install allure-pytest playwright faker
                     pip install -r requirements.txt
-                    echo "=== Обновление testit пакетов для совместимости с API (autoTestTags) ==="
-                    pip uninstall testit-api-client testit-python-commons -y
-                    pip install --no-cache-dir --upgrade testit-api-client testit-python-commons
-                    echo "=== Проверка версий testit пакетов ==="
-                    pip show testit-api-client testit-python-commons
+                    pip install allure-pytest playwright faker
                     playwright install
-                    echo "=== Проверка: плагин testit-adapter-pytest установлен ==="
-                    pip show testit-adapter-pytest
-                    echo "=== Проверка: список установленных пакетов ==="
-                    pip list | findstr testit
-                    echo "=== Проверка: версии Python и pytest ==="
-                    venv\\Scripts\\python.exe --version
-                    venv\\Scripts\\python.exe -m pytest --version
-                    echo "=== Проверка: pytest видит плагин ==="
-                    venv\\Scripts\\python.exe -c "import sys; sys.path.insert(0, ''); import pytest; import testit_adapter_pytest.plugin; print('Plugin found:', hasattr(testit_adapter_pytest.plugin, 'pytest_configure'))"
-                    echo "=== Создаём заглушку testit.py ==="
-                    echo "from testit_adapter_pytest import *" > testit.py
+
+                    echo "=== Проверка установленных версий ==="
+                    pip show testit-api-client testit-python-commons testit-adapter-pytest
                 """
             }
         }
