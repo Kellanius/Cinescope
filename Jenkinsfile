@@ -120,7 +120,7 @@ pipeline {
                     set PYTHONPATH=%WORKSPACE%
                     set TMS_ADAPTER_MODE=0
                     set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
-                    rem можно включить детальное логирование: set TMS_LOG_LEVEL=DEBUG
+                    set TMS_LOG_LEVEL=DEBUG
                     echo "=== Запуск тестов в режиме 0 (фильтрация по прогону) ==="
                     python -m pytest tests/ -v --tb=short --alluredir=allure-results
                 """
