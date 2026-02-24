@@ -142,21 +142,29 @@ pipeline {
             steps {
                 bat """
                     call venv\\Scripts\\activate.bat
+                    echo "=== Диагностика переменных Test IT ==="
+                    echo "TMS_ADAPTER_MODE=1"
+                    echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
+                    echo "TMS_URL=%TMS_URL%"
+
                     setlocal enabledelayedexpansion
                     set PYTHONPATH=%WORKSPACE%
                     set TMS_ADAPTER_MODE=1
                     set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
+
                     echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
                     if exist filter.txt (
                         for /f "usebackq delims=" %%i in (filter.txt) do set "FILTER=%%i"
                         set "FILTER=!FILTER:\\ = !"
                         set "FILTER=!FILTER:\\.=.!"
                         echo "Фильтр для -k: !FILTER!"
-                        python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results
+                        python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results --testit
                     ) else (
                         echo "Файл filter.txt не найден. Запуск всех тестов."
-                        python -m pytest tests/ -v --tb=short --alluredir=allure-results
+                        python -m pytest tests/ -v --tb=short --alluredir=allure-results --testit
                     )
+
+                    echo "=== Завершено. Код возврата: %ERRORLEVEL% ==="
                 """
             }
         }
