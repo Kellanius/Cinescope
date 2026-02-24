@@ -113,16 +113,43 @@ pipeline {
             }
         }
 
+        stage('Filter tests by Test Run ID') {
+            when { expression { params.TEST_RUN_ID != '' } }
+            steps {
+                bat """
+                    call venv\\Scripts\\activate.bat
+                    echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
+                    testit autotests_filter ^
+                      --url %TMS_URL% ^
+                      --token %TMS_PRIVATE_TOKEN% ^
+                      --configuration-id %TMS_CONFIGURATION_ID% ^
+                      --testrun-id ${params.TEST_RUN_ID} ^
+                      --framework playwright ^
+                      --output filter.txt
+                    echo "=== Содержимое фильтра (externalId) ==="
+                    type filter.txt
+                """
+            }
+        }
+
         stage('Run Tests') {
             steps {
                 bat """
                     call venv\\Scripts\\activate.bat
                     set PYTHONPATH=%WORKSPACE%
-                    set TMS_ADAPTER_MODE=0
+                    set TMS_ADAPTER_MODE=1
                     set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
-                    set TMS_LOG_LEVEL=DEBUG
-                    echo "=== Запуск тестов в режиме 0 (фильтрация по прогону) ==="
-                    python -m pytest tests/ -v --tb=short --alluredir=allure-results
+
+                    echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
+                    if exist filter.txt (
+                        set /p FILTER=<filter.txt
+                        echo "Фильтр для --grep: %FILTER%"
+                        :: Важно! Команда для запуска именно playwright test, а не pytest
+                        npx playwright test --grep "%FILTER%"
+                    ) else (
+                        echo "Файл filter.txt не найден. Запуск всех тестов."
+                        npx playwright test
+                    )
                 """
             }
         }
