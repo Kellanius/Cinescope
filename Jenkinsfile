@@ -144,11 +144,11 @@ pipeline {
                     if exist filter.txt (
                         echo "Содержимое filter.txt:"
                         type filter.txt
-                        echo "Передаём фильтр в playwright через PowerShell"
-                        powershell -Command "\$filter = Get-Content filter.txt -Raw; Write-Host \"Filter: \$filter\"; npx playwright test --grep \"\$filter\""
+                        echo "Передаём фильтр в pytest через PowerShell (обход политик)"
+                        powershell -ExecutionPolicy Bypass -Command "& { \$filter = Get-Content filter.txt -Raw; Write-Host \"Фильтр: \$filter\"; python -m pytest tests/ -k \"\$filter\" -v --tb=short --alluredir=allure-results }"
                     ) else (
                         echo "Файл filter.txt не найден. Запуск всех тестов."
-                        npx playwright test
+                        python -m pytest tests/ -v --tb=short --alluredir=allure-results
                     )
                 """
             }
