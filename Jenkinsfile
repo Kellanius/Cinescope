@@ -131,8 +131,15 @@ pipeline {
                       --configuration-id %TMS_CONFIGURATION_ID% ^
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
-                      --debug
+                      --debug ^
+                      --output %FILTER_FILE%
                     echo "Команда завершилась с кодом %ERRORLEVEL%"
+                    if exist %FILTER_FILE% (
+                        echo "=== Содержимое фильтра ==="
+                        type %FILTER_FILE%
+                    ) else (
+                        echo "Файл фильтра не создан"
+                    )
                 """
             }
         }
