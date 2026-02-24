@@ -96,6 +96,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
+                    set TMS_LOG_LEVEL=DEBUG
                     def args = "--testit -v --tb=short"
 
                     // --- ЭТО КЛЮЧЕВОЙ МОМЕНТ ---
