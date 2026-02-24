@@ -126,6 +126,8 @@ pipeline {
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
                       --debug > filter_debug.log 2>&1
+                    echo "=== Содержимое filter_debug.log ==="
+                    type filter_debug.log
                     echo "=== Извлечение external_id из лога ==="
                     powershell -Command "\$log = Get-Content filter_debug.log -Raw; \$matches = [regex]::Matches(\$log, '''autotest_external_id'': ''([^'']+)'''); if (\$matches.Count -gt 0) { \$ids = \$matches | ForEach-Object { \$_.Groups[1].Value }; \$filter = \$ids -join '|'; Set-Content -Path filter.txt -Value \$filter; Write-Host \"External IDs: \$filter\" } else { Write-Host 'External IDs not found'; New-Item -Path filter.txt -ItemType file -Force | Out-Null }"
                     echo "=== Содержимое фильтра ==="
