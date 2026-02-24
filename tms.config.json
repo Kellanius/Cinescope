@@ -1,0 +1,7 @@
+{
+  "url": "${TMS_URL}",
+  "privateToken": "${TMS_PRIVATE_TOKEN}",
+  "projectId": "${TMS_PROJECT_ID}",
+  "configurationId": "${TMS_CONFIGURATION_ID}",
+  "adapterMode": 1
+}

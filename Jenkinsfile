@@ -10,6 +10,13 @@ pipeline {
         PYTHON = "C:\\python312\\python.exe"
         PROJECT_ROOT = "%WORKSPACE%"
         VENV = "%WORKSPACE%\\venv"
+        // --- НОВОЕ: Переменные для Test IT (будут подставлены из credentials) ---
+        TMS_URL = credentials('testit-url')
+        TMS_PRIVATE_TOKEN = credentials('testit-token')
+        TMS_PROJECT_ID = credentials('testit-project-id')
+        TMS_CONFIGURATION_ID = credentials('testit-config-id')
+        // Переменная для пути к фильтру
+        FILTER_FILE = "%WORKSPACE%\\testit-filter.txt"
     }
 
     stages {
@@ -22,6 +29,7 @@ pipeline {
             }
         }
 
+         // --- ЭТОТ ЭТАП БОЛЬШЕ НЕ НУЖЕН В ПРЕЖНЕМ ВИДЕ, НО МЫ ЕГО ПЕРЕДЕЛАЕМ ---
         stage('Create TestIT Config') {
             steps {
                 withCredentials([
@@ -31,16 +39,18 @@ pipeline {
                     string(credentialsId: 'testit-config-id', variable: 'CONFIG_ID')
                 ]) {
                     script {
+                        // Теперь мы создаем конфиг для Playwright адаптера
                         bat """
-                            echo [testit] > connection_config.ini
-                            echo url = %URL% >> connection_config.ini
-                            echo privateToken = %TOKEN% >> connection_config.ini
-                            echo projectId = %PROJECT_ID% >> connection_config.ini
-                            echo configurationId = %CONFIG_ID% >> connection_config.ini
-                            echo adapterMode = 2 >> connection_config.ini
+                            echo { > tms.config.json
+                            echo   "url": "${URL}", >> tms.config.json
+                            echo   "privateToken": "${TOKEN}", >> tms.config.json
+                            echo   "projectId": "${PROJECT_ID}", >> tms.config.json
+                            echo   "configurationId": "${CONFIG_ID}", >> tms.config.json
+                            echo   "adapterMode": 1 >> tms.config.json
+                            echo } >> tms.config.json
                         """
-                        echo "✅ Файл connection_config.ini успешно создан"
-                        bat "type connection_config.ini"
+                        echo "✅ Файл tms.config.json успешно создан"
+                        bat "type tms.config.json"
                     }
                 }
             }
@@ -70,6 +80,11 @@ pipeline {
                     pip install allure-pytest playwright faker
                     playwright install
 
+                    echo "=== Установка Node.js и testit-adapter-playwright ==="
+                    bat 'where node || (echo Node.js not found && exit /b 1)'
+                    :: Убедись, что Node.js установлен на агенте. Если нет - нужно добавить шаг установки.
+                    npm install -g testit-adapter-playwright
+
                     echo "=== Переустановка greenlet для устранения проблем с импортом ==="
                     pip uninstall greenlet -y
                     pip install greenlet==3.3.2 --force-reinstall --no-cache-dir
@@ -82,7 +97,7 @@ pipeline {
                     python -c "from pydantic_core import __version__; print('✅ pydantic-core imported successfully')" || (echo "❌ Ошибка импорта pydantic-core" && exit 1)
 
                     echo "=== Проверка установленных версий ==="
-                    pip show testit-api-client testit-python-commons testit-adapter-pytest
+                    pip show testit-api-client testit-python-commons testit-adapter-pytest testit-cli
                 """
             }
         }
@@ -93,42 +108,43 @@ pipeline {
             }
         }
 
+        // --- НОВЫЙ ЭТАП: Фильтрация тестов с помощью Test IT CLI ---
+        stage('Filter tests by Test Run ID') {
+            when {
+                expression { params.TEST_RUN_ID != '' }
+            }
+            steps {
+                bat """
+                    call venv\\Scripts\\activate.bat
+                    echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
+                    testit autotests_filter ^
+                      --url %TMS_URL% ^
+                      --configuration-id %TMS_CONFIGURATION_ID% ^
+                      --testrun-id ${params.TEST_RUN_ID} ^
+                      --framework playwright ^
+                      --output %FILTER_FILE%
+
+                    echo "=== Содержимое фильтра ==="
+                    type %FILTER_FILE%
+                """
+            }
+        }
+
         stage('Run Tests') {
             steps {
-                script {
-                    def args = "--testit -v --tb=short"
+                bat """
+                    call venv\\Scripts\\activate.bat
+                    set PYTHONPATH=%WORKSPACE%
+                    set TMS_ADAPTER_MODE=1
+                    set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
 
-                    // --- ЭТО КЛЮЧЕВОЙ МОМЕНТ ---
-                    // Мы передаем testRunId из параметра сборки.
-                    // Именно это значение Test IT присылает при запуске из UI.
-                    if (params.TEST_RUN_ID) {
-                        args += " --tmsTestRunId=${params.TEST_RUN_ID}"
-                        echo "Будет использован testRunId: ${params.TEST_RUN_ID}"
-                    } else {
-                        // Если TEST_RUN_ID не передан (например, ручной запуск), то работать не будет.
-                        // Можно либо упасть с ошибкой, либо переключиться на режим 2.
-                        // Но для UI он обязан быть.
-                        error "Параметр TEST_RUN_ID не задан. Для запуска из UI он обязателен."
-                    }
-                    
-                    bat """
-                        set TMS_LOG_LEVEL=DEBUG
-                        call venv\\Scripts\\activate.bat
-                        set PYTHONPATH=%WORKSPACE%
-                        echo "=== Проверка: какой Python используется ==="
-                        where python
-                        echo "=== Проверка: плагин testit-adapter-pytest установлен ==="
-                        venv\\Scripts\\pip.exe show testit-adapter-pytest
-                        echo "=== Проверка: доступность плагина через импорт ==="
-                        venv\\Scripts\\python.exe -c "import testit_adapter_pytest; print('Plugin imported OK')" || echo "Plugin import failed!"
-                        echo "=== Проверка: pytest видит опции плагина ==="
-                        venv\\Scripts\\python.exe -m pytest --help 2>&1 | findstr /C:"tms" || echo "Плагин testit не найден в списке опций pytest!"
-                        echo "=== Проверка: модуль testit доступен ==="
-                        python -c "import testit; print('✅ testit module loaded, attributes:', dir(testit))" || (echo "❌ Модуль testit не найден!" && exit 1)
-                        echo "=== Запуск тестов ==="
-                        venv\\Scripts\\python.exe -m pytest tests ${args}
-                    """
-                }
+                    echo "=== Запуск тестов, соответствующих фильтру ==="
+                    :: Преобразуем содержимое filter.txt в строку для ключа -k
+                    :: Удаляем пустые строки и объединяем через or
+                    set /p FILTER=<%FILTER_FILE%
+                    set FILTER=%FILTER: =%
+                    python -m pytest tests/ -k "%FILTER%" -v --tb=short --alluredir=allure-results
+                """
             }
         }
     }
