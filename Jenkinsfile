@@ -124,6 +124,7 @@ pipeline {
             steps {
                 bat """
                     call venv\\Scripts\\activate.bat
+                    set TMP_OUT=%WORKSPACE%\\filter_raw.txt
                     echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
                     testit autotests_filter ^
                       --url %TMS_URL% ^
@@ -132,14 +133,21 @@ pipeline {
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
                       --debug ^
-                      --output %FILTER_FILE%
+                      --output %FILTER_FILE% > %TMP_OUT% 2>&1
                     echo "Команда завершилась с кодом %ERRORLEVEL%"
+                    if not exist %FILTER_FILE% (
+                        echo "Файл фильтра не создан, пробуем извлечь external_id из вывода"
+                        powershell -Command "$output = Get-Content '%TMP_OUT%' -Raw; $matches = [regex]::Matches($output, '''autotest_external_id'': ''([^'']+)'''); $ids = $matches | ForEach-Object { $_.Groups[1].Value }; if ($ids) { $filter = $ids -join '|'; Set-Content -Path '%FILTER_FILE%' -Value $filter } else { Write-Host 'External IDs не найдены' }"
+                    ) else (
+                        echo "Файл фильтра создан командой"
+                    )
                     if exist %FILTER_FILE% (
                         echo "=== Содержимое фильтра ==="
                         type %FILTER_FILE%
                     ) else (
-                        echo "Файл фильтра не создан"
+                        echo "Файл фильтра не создан даже после парсинга"
                     )
+                    del %TMP_OUT%
                 """
             }
         }
