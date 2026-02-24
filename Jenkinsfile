@@ -124,15 +124,15 @@ pipeline {
             steps {
                 bat """
                     call venv\\Scripts\\activate.bat
+                    echo "=== Доступные опции autotests_filter ==="
+                    testit autotests_filter --help
                     echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
                     echo "TMS_URL=%TMS_URL%"
-                    echo "TMS_PROJECT_ID=%TMS_PROJECT_ID%"
                     echo "TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID%"
                     echo "TMS_PRIVATE_TOKEN=*** (skipped)"
                     testit autotests_filter ^
                       --url %TMS_URL% ^
                       --token %TMS_PRIVATE_TOKEN% ^
-                      --project-id %TMS_PROJECT_ID% ^
                       --configuration-id %TMS_CONFIGURATION_ID% ^
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
