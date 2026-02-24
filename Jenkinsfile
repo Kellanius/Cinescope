@@ -73,6 +73,11 @@ pipeline {
                     pip install allure-pytest playwright faker
                     playwright install
 
+                    echo "=== Переустановка greenlet для устранения проблем с импортом ==="
+                    pip uninstall greenlet -y
+                    pip install greenlet==3.3.2 --force-reinstall --no-cache-dir
+                    python -c "import greenlet; print('✅ greenlet imported successfully')" || (echo "❌ Ошибка импорта greenlet" && exit 1)
+
                     echo "=== Проверка установленных версий ==="
                     pip show testit-api-client testit-python-commons testit-adapter-pytest
                 """
