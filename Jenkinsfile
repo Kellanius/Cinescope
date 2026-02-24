@@ -39,7 +39,6 @@ pipeline {
                             echo configurationId = %CONFIG_ID% >> connection_config.ini
                             echo adapterMode = 0 >> connection_config.ini
                         """
-                        }
                         echo "✅ Файл connection_config.ini успешно создан"
                         bat "type connection_config.ini"
                     }
@@ -107,7 +106,7 @@ pipeline {
                         // Можно либо упасть с ошибкой, либо переключиться на режим 2.
                         // Но для UI он обязан быть.
                         error "Параметр TEST_RUN_ID не задан. Для запуска из UI он обязателен."
-                        }
+                    }
                     
                     bat """
                         call venv\\Scripts\\activate.bat
