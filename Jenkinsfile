@@ -31,19 +31,14 @@ pipeline {
                     string(credentialsId: 'testit-config-id', variable: 'CONFIG_ID')
                 ]) {
                     script {
-                        def testPlanId = params.TEST_PLAN_ID ?: ''
                         bat """
                             echo [testit] > connection_config.ini
                             echo url = %URL% >> connection_config.ini
                             echo privateToken = %TOKEN% >> connection_config.ini
                             echo projectId = %PROJECT_ID% >> connection_config.ini
                             echo configurationId = %CONFIG_ID% >> connection_config.ini
-                            echo adapterMode = 2 >> connection_config.ini
+                            echo adapterMode = 0 >> connection_config.ini
                         """
-                        if (testPlanId) {
-                            bat """
-                                echo testPlanId = ${testPlanId} >> connection_config.ini
-                            """
                         }
                         echo "✅ Файл connection_config.ini успешно создан"
                         bat "type connection_config.ini"
@@ -101,15 +96,18 @@ pipeline {
                 script {
                     def args = "--testit -v --tb=short"
 
-                    // tmsTestRunId поддерживается как аргумент командной строки
+                    // --- ЭТО КЛЮЧЕВОЙ МОМЕНТ ---
+                    // Мы передаем testRunId из параметра сборки.
+                    // Именно это значение Test IT присылает при запуске из UI.
                     if (params.TEST_RUN_ID) {
                         args += " --tmsTestRunId=${params.TEST_RUN_ID}"
-                    }
-                    // tmsTestPlanId НЕ поддерживается как аргумент командной строки в версии 3.12.1
-                    // Передается через connection_config.ini в stage 'Create TestIT Config'
-
-                    def testRunId = params.TEST_RUN_ID ?: ''
-                    def testPlanId = params.TEST_PLAN_ID ?: ''
+                        echo "Будет использован testRunId: ${params.TEST_RUN_ID}"
+                    } else {
+                        // Если TEST_RUN_ID не передан (например, ручной запуск), то работать не будет.
+                        // Можно либо упасть с ошибкой, либо переключиться на режим 2.
+                        // Но для UI он обязан быть.
+                        error "Параметр TEST_RUN_ID не задан. Для запуска из UI он обязателен."
+                        }
                     
                     bat """
                         call venv\\Scripts\\activate.bat
@@ -122,13 +120,6 @@ pipeline {
                         venv\\Scripts\\python.exe -c "import testit_adapter_pytest; print('Plugin imported OK')" || echo "Plugin import failed!"
                         echo "=== Проверка: pytest видит опции плагина ==="
                         venv\\Scripts\\python.exe -m pytest --help 2>&1 | findstr /C:"tms" || echo "Плагин testit не найден в списке опций pytest!"
-                        echo "=== Важно: tmsTestPlanId передается через connection_config.ini, а не через CLI аргумент ==="
-                        echo "=== Проверка: файл connection_config.ini существует ==="
-                        if exist connection_config.ini (
-                            type connection_config.ini
-                        ) else (
-                            echo ОШИБКА: файл connection_config.ini не найден!
-                        )
                         echo "=== Запуск тестов ==="
                         venv\\Scripts\\python.exe -m pytest tests ${args}
                     """
