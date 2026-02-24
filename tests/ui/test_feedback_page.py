@@ -42,6 +42,3 @@ class TestMoviePage:
 
         with testit.step("проверка элементов"):
             movie_page.assert_feedback(feedback_comment, movie_score)
-
-def test_dummy_feedback():
-    pass

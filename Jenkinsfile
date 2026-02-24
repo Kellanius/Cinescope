@@ -15,6 +15,8 @@ pipeline {
         TMS_PRIVATE_TOKEN = credentials('testit-token')
         TMS_PROJECT_ID = credentials('testit-project-id')
         TMS_CONFIGURATION_ID = credentials('testit-config-id')
+        SUPER_ADMIN_EMAIL = credentials('super-admin-email')
+        SUPER_ADMIN_PASSWORD = credentials('super-admin-password')
         // Путь к файлу фильтра (больше не используется, но оставлен на всякий случай)
         FILTER_FILE = "%WORKSPACE%\\testit-filter.txt"
     }
