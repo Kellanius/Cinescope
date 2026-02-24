@@ -126,6 +126,8 @@ pipeline {
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
                       --debug > filter_debug.log 2>&1
+                    echo "=== Содержимое filter_debug.log ==="
+                    type filter_debug.log
                     echo "=== Извлечение external_key из лога ==="
                     powershell -Command "\$log = Get-Content filter_debug.log -Raw; \$matches = [regex]::Matches(\$log, '''external_key'': ''([^'']+)'''); if (\$matches.Count -gt 0) { \$keys = \$matches | ForEach-Object { \$_.Groups[1].Value }; \$filter = \$keys -join '|'; Set-Content -Path filter.txt -Value \$filter; Write-Host \"External keys: \$filter\" } else { Write-Host 'External keys not found'; Set-Content -Path filter.txt -Value '' }"
                     echo "=== Содержимое filter.txt (external_key) ==="
@@ -141,7 +143,6 @@ pipeline {
                     set PYTHONPATH=%WORKSPACE%
                     set TMS_ADAPTER_MODE=1
                     set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
-
                     echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
                     if exist filter.txt (
                         set /p FILTER=<filter.txt
