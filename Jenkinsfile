@@ -126,18 +126,24 @@ pipeline {
                     call venv\\Scripts\\activate.bat
                     echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
                     echo "TMS_URL=%TMS_URL%"
+                    echo "TMS_PROJECT_ID=%TMS_PROJECT_ID%"
                     echo "TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID%"
                     echo "TMS_PRIVATE_TOKEN=*** (skipped)"
                     testit autotests_filter ^
                       --url %TMS_URL% ^
                       --token %TMS_PRIVATE_TOKEN% ^
+                      --project-id %TMS_PROJECT_ID% ^
                       --configuration-id %TMS_CONFIGURATION_ID% ^
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
-                      --output %FILTER_FILE% 2>&1
+                      --output %FILTER_FILE%
                     echo "Команда завершилась с кодом %ERRORLEVEL%"
+                    if not exist %FILTER_FILE% (
+                        echo "Файл фильтра не создан, создаём пустой"
+                        type nul > %FILTER_FILE%
+                    )
                     echo "=== Содержимое фильтра ==="
-                    type %FILTER_FILE% || echo "Файл фильтра не создан или пуст"
+                    type %FILTER_FILE%
                 """
             }
         }
