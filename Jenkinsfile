@@ -37,7 +37,7 @@ pipeline {
                             echo privateToken = %TOKEN% >> connection_config.ini
                             echo projectId = %PROJECT_ID% >> connection_config.ini
                             echo configurationId = %CONFIG_ID% >> connection_config.ini
-                            echo adapterMode = 0 >> connection_config.ini
+                            echo adapterMode = 1 >> connection_config.ini
                         """
                         echo "✅ Файл connection_config.ini успешно создан"
                         bat "type connection_config.ini"
@@ -58,9 +58,9 @@ pipeline {
                     pip uninstall testit-adapter-pytest testit-python-commons testit-api-client -y
 
                     echo "=== Установка совместимых версий для Test IT 5.6 ==="
-                    pip install testit-api-client==7.0.0 || exit /b 1
-                    pip install testit-python-commons==3.11.2 || exit /b 1
-                    pip install testit-adapter-pytest==3.11.2 || exit /b 1
+                    pip install testit-api-client || exit /b 1
+                    pip install testit-python-commons || exit /b 1
+                    pip install testit-adapter-pytest || exit /b 1
 
                     echo "=== Установка остальных зависимостей ==="
                     pip install -r requirements.txt
