@@ -125,13 +125,13 @@ pipeline {
                       --configuration-id %TMS_CONFIGURATION_ID% ^
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
-                      --debug > filter_debug.log 2>&1
-                    echo "=== Содержимое filter_debug.log ==="
-                    type filter_debug.log
-                    echo "=== Извлечение external_key из лога ==="
-                    powershell -Command "\$log = Get-Content filter_debug.log -Raw; \$matches = [regex]::Matches(\$log, '''external_key'': ''([^'']+)'''); if (\$matches.Count -gt 0) { \$keys = \$matches | ForEach-Object { \$_.Groups[1].Value }; \$filter = \$keys -join '|'; Set-Content -Path filter.txt -Value \$filter; Write-Host \"External keys: \$filter\" } else { Write-Host 'External keys not found'; Set-Content -Path filter.txt -Value '' }"
-                    echo "=== Содержимое filter.txt (external_key) ==="
+                      --debug ^
+                      --output filter.txt > filter_debug.log 2>&1
+                    echo "Команда завершилась с кодом %ERRORLEVEL%"
+                    echo "=== Содержимое filter.txt (фильтр для pytest) ==="
                     type filter.txt
+                    echo "=== Содержимое filter_debug.log (для отладки) ==="
+                    type filter_debug.log
                 """
             }
         }
