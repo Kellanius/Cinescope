@@ -56,51 +56,59 @@ pipeline {
             }
         }
 
-        stage('Setup VirtualEnv') {
-            steps {
-                echo '🔧 Создаём виртуальное окружение...'
-                bat """
-                    "%PYTHON%" -m venv venv
-                    call venv\\Scripts\\activate.bat
-                    python -m pip install --upgrade pip
+    stage('Setup VirtualEnv') {
+        steps {
+            echo '🔧 Создаём виртуальное окружение...'
+            bat """
+                echo "=== Текущий PATH ==="
+                echo %PATH%
+                echo "=== Проверка Node.js ==="
+                where node
 
-                    :: Удаляем старую заглушку testit.py, если она есть
-                    if exist testit.py del testit.py
+                "%PYTHON%" -m venv venv
+                call venv\\Scripts\\activate.bat
+                python -m pip install --upgrade pip
 
-                    echo "=== Удаление старых версий testit-пакетов ==="
-                    pip uninstall testit-adapter-pytest testit-python-commons testit-api-client -y
+                :: Удаляем старую заглушку testit.py, если она есть
+                if exist testit.py del testit.py
 
-                    echo "=== Установка совместимых версий для Test IT 5.6 ==="
-                    pip install testit-api-client || exit /b 1
-                    pip install testit-python-commons || exit /b 1
-                    pip install testit-adapter-pytest || exit /b 1
+                echo "=== Удаление старых версий testit-пакетов ==="
+                pip uninstall testit-adapter-pytest testit-python-commons testit-api-client -y
 
-                    echo "=== Установка остальных зависимостей ==="
-                    pip install -r requirements.txt
-                    pip install allure-pytest playwright faker
-                    playwright install
+                echo "=== Установка совместимых версий для Test IT 5.6 ==="
+                pip install testit-api-client || exit /b 1
+                pip install testit-python-commons || exit /b 1
+                pip install testit-adapter-pytest || exit /b 1
 
-                    echo "=== Установка Node.js и testit-adapter-playwright ==="
-                    bat 'where node || (echo Node.js not found && exit /b 1)'
-                    :: Убедись, что Node.js установлен на агенте. Если нет - нужно добавить шаг установки.
-                    npm install -g testit-adapter-playwright
+                echo "=== Установка остальных зависимостей ==="
+                pip install -r requirements.txt
+                pip install allure-pytest playwright faker
+                playwright install
 
-                    echo "=== Переустановка greenlet для устранения проблем с импортом ==="
-                    pip uninstall greenlet -y
-                    pip install greenlet==3.3.2 --force-reinstall --no-cache-dir
-                    python -c "import greenlet; print('✅ greenlet imported successfully')" || (echo "❌ Ошибка импорта greenlet" && exit 1)
+                echo "=== Установка testit-cli (если ещё нет) ==="
+                pip install testit-cli || exit /b 1
 
-                    echo "=== Переустановка pydantic и pydantic-core ==="
-                    pip uninstall pydantic pydantic-core -y
-                    pip install pydantic==2.12.5 --force-reinstall --no-cache-dir
-                    pip install pydantic-core==2.41.5 --force-reinstall --no-cache-dir
-                    python -c "from pydantic_core import __version__; print('✅ pydantic-core imported successfully')" || (echo "❌ Ошибка импорта pydantic-core" && exit 1)
+                echo "=== Установка testit-adapter-playwright через npm ==="
+                :: Проверяем наличие Node.js
+                where node || (echo Node.js not found && exit /b 1)
+                npm install -g testit-adapter-playwright
 
-                    echo "=== Проверка установленных версий ==="
-                    pip show testit-api-client testit-python-commons testit-adapter-pytest testit-cli
-                """
-            }
+                echo "=== Переустановка greenlet для устранения проблем с импортом ==="
+                pip uninstall greenlet -y
+                pip install greenlet==3.3.2 --force-reinstall --no-cache-dir
+                python -c "import greenlet; print('✅ greenlet imported successfully')" || (echo "❌ Ошибка импорта greenlet" && exit 1)
+
+                echo "=== Переустановка pydantic и pydantic-core ==="
+                pip uninstall pydantic pydantic-core -y
+                pip install pydantic==2.12.5 --force-reinstall --no-cache-dir
+                pip install pydantic-core==2.41.5 --force-reinstall --no-cache-dir
+                python -c "from pydantic_core import __version__; print('✅ pydantic-core imported successfully')" || (echo "❌ Ошибка импорта pydantic-core" && exit 1)
+
+                echo "=== Проверка установленных версий ==="
+                pip show testit-api-client testit-python-commons testit-adapter-pytest testit-cli
+            """
         }
+    }
 
         stage('Clear pytest cache') {
             steps {
