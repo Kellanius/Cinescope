@@ -78,6 +78,12 @@ pipeline {
                     pip install greenlet==3.3.2 --force-reinstall --no-cache-dir
                     python -c "import greenlet; print('✅ greenlet imported successfully')" || (echo "❌ Ошибка импорта greenlet" && exit 1)
 
+                    echo "=== Переустановка pydantic и pydantic-core ==="
+                    pip uninstall pydantic pydantic-core -y
+                    pip install pydantic==2.12.5 --force-reinstall --no-cache-dir
+                    pip install pydantic-core==2.41.5 --force-reinstall --no-cache-dir
+                    python -c "from pydantic_core import __version__; print('✅ pydantic-core imported successfully')" || (echo "❌ Ошибка импорта pydantic-core" && exit 1)
+
                     echo "=== Проверка установленных версий ==="
                     pip show testit-api-client testit-python-commons testit-adapter-pytest
                 """
