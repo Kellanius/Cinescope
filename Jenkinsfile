@@ -125,8 +125,10 @@ pipeline {
                       --configuration-id %TMS_CONFIGURATION_ID% ^
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
-                      --output filter.txt
-                    echo "=== Содержимое фильтра (externalId) ==="
+                      --debug > filter_debug.log 2>&1
+                    echo "=== Извлечение external_key из лога ==="
+                    powershell -Command "\$log = Get-Content filter_debug.log -Raw; \$matches = [regex]::Matches(\$log, '''external_key'': ''([^'']+)'''); if (\$matches.Count -gt 0) { \$keys = \$matches | ForEach-Object { \$_.Groups[1].Value }; \$filter = \$keys -join '|'; Set-Content -Path filter.txt -Value \$filter; Write-Host \"External keys: \$filter\" } else { Write-Host 'External keys not found'; Set-Content -Path filter.txt -Value '' }"
+                    echo "=== Содержимое filter.txt (external_key) ==="
                     type filter.txt
                 """
             }
@@ -142,10 +144,9 @@ pipeline {
 
                     echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
                     if exist filter.txt (
-                        echo "Содержимое filter.txt:"
-                        type filter.txt
-                        echo "Передаём фильтр в pytest через PowerShell (обход политик)"
-                        powershell -ExecutionPolicy Bypass -Command "& { \$filter = Get-Content filter.txt -Raw; Write-Host \"Фильтр: \$filter\"; python -m pytest tests/ -k \"\$filter\" -v --tb=short --alluredir=allure-results }"
+                        set /p FILTER=<filter.txt
+                        echo "Фильтр для -k: %FILTER%"
+                        python -m pytest tests/ -k "%FILTER%" -v --tb=short --alluredir=allure-results
                     ) else (
                         echo "Файл filter.txt не найден. Запуск всех тестов."
                         python -m pytest tests/ -v --tb=short --alluredir=allure-results
