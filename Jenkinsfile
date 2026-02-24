@@ -15,7 +15,7 @@ pipeline {
         TMS_PRIVATE_TOKEN = credentials('testit-token')
         TMS_PROJECT_ID = credentials('testit-project-id')
         TMS_CONFIGURATION_ID = credentials('testit-config-id')
-        // Путь к файлу фильтра
+        // Путь к файлу фильтра (больше не используется, но оставлен на всякий случай)
         FILTER_FILE = "%WORKSPACE%\\testit-filter.txt"
     }
 
@@ -120,17 +120,17 @@ pipeline {
                     set PYTHONPATH=%WORKSPACE%
                     set TMS_ADAPTER_MODE=0
                     set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
-                    set TMS_LOG_LEVEL=DEBUG   // добавить при необходимости
+                    rem можно включить детальное логирование: set TMS_LOG_LEVEL=DEBUG
                     echo "=== Запуск тестов в режиме 0 (фильтрация по прогону) ==="
                     python -m pytest tests/ -v --tb=short --alluredir=allure-results
                 """
             }
         }
+    } // закрываем stages
 
     post {
         always {
             echo '🏁 Сборка завершена.'
-            }
         }
     }
 }
