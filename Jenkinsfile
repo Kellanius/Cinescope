@@ -64,9 +64,9 @@ pipeline {
                     pip uninstall testit-adapter-pytest testit-python-commons testit-api-client -y
 
                     echo "=== Установка совместимых версий для Test IT 5.6 ==="
-                    pip install testit-api-client==6.5.0
-                    pip install testit-python-commons==3.11.0
-                    pip install testit-adapter-pytest==3.11.0
+                    pip install testit-api-client==7.0.0 || exit /b 1
+                    pip install testit-python-commons==3.11.2 || exit /b 1
+                    pip install testit-adapter-pytest==3.11.2 || exit /b 1
 
                     echo "=== Установка остальных зависимостей ==="
                     pip install -r requirements.txt
