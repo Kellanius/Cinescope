@@ -54,6 +54,9 @@ pipeline {
                     call venv\\Scripts\\activate.bat
                     python -m pip install --upgrade pip
 
+                    :: Удаляем старую заглушку testit.py, если она есть
+                    if exist testit.py del testit.py
+
                     echo "=== Удаление старых версий testit-пакетов ==="
                     pip uninstall testit-adapter-pytest testit-python-commons testit-api-client -y
 
@@ -119,6 +122,8 @@ pipeline {
                         venv\\Scripts\\python.exe -c "import testit_adapter_pytest; print('Plugin imported OK')" || echo "Plugin import failed!"
                         echo "=== Проверка: pytest видит опции плагина ==="
                         venv\\Scripts\\python.exe -m pytest --help 2>&1 | findstr /C:"tms" || echo "Плагин testit не найден в списке опций pytest!"
+                        echo "=== Проверка: модуль testit доступен ==="
+                        python -c "import testit; print('✅ testit module loaded, attributes:', dir(testit))" || (echo "❌ Модуль testit не найден!" && exit 1)
                         echo "=== Запуск тестов ==="
                         venv\\Scripts\\python.exe -m pytest tests ${args}
                     """
