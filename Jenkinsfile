@@ -44,7 +44,7 @@ pipeline {
                             echo   "privateToken": "${TOKEN}", >> tms.config.json
                             echo   "projectId": "${PROJECT_ID}", >> tms.config.json
                             echo   "configurationId": "${CONFIG_ID}", >> tms.config.json
-                            echo   "adapterMode": 1 >> tms.config.json
+                            echo   "adapterMode": 0 >> tms.config.json
                             echo } >> tms.config.json
                         """
                         echo "✅ Файл tms.config.json успешно создан"
@@ -113,51 +113,19 @@ pipeline {
             }
         }
 
-        stage('Filter tests by Test Run ID') {
-            when { expression { params.TEST_RUN_ID != '' } }
-            steps {
-                bat """
-                    call venv\\Scripts\\activate.bat
-                    echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
-                    testit autotests_filter ^
-                      --url %TMS_URL% ^
-                      --token %TMS_PRIVATE_TOKEN% ^
-                      --configuration-id %TMS_CONFIGURATION_ID% ^
-                      --testrun-id ${params.TEST_RUN_ID} ^
-                      --framework playwright ^
-                      --debug ^
-                      --output filter.txt
-                    echo "Команда завершилась с кодом %ERRORLEVEL%"
-                    if exist filter.txt (
-                        echo "=== Содержимое фильтра ==="
-                        type filter.txt
-                    ) else (
-                        echo "Файл filter.txt не создан, проверьте ошибки выше"
-                    )
-                """
-            }
-        }
-
         stage('Run Tests') {
             steps {
                 bat """
                     call venv\\Scripts\\activate.bat
                     set PYTHONPATH=%WORKSPACE%
-                    set TMS_ADAPTER_MODE=1
+                    set TMS_ADAPTER_MODE=0
                     set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
-                    echo "=== Запуск тестов, соответствующих фильтру ==="
-                    if exist filter.txt (
-                        set /p FILTER=<filter.txt
-                        echo "Фильтр: %FILTER%"
-                        python -m pytest tests/ -k "%FILTER%" -v --tb=short --alluredir=allure-results
-                    ) else (
-                        echo "Файл filter.txt не найден, запуск всех тестов"
-                        python -m pytest tests/ -v --tb=short --alluredir=allure-results
-                    )
+                    set TMS_LOG_LEVEL=DEBUG   // добавить при необходимости
+                    echo "=== Запуск тестов в режиме 0 (фильтрация по прогону) ==="
+                    python -m pytest tests/ -v --tb=short --alluredir=allure-results
                 """
             }
         }
-    } // закрываем stages
 
     post {
         always {
