@@ -96,7 +96,6 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    set TMS_LOG_LEVEL=DEBUG
                     def args = "--testit -v --tb=short"
 
                     // --- ЭТО КЛЮЧЕВОЙ МОМЕНТ ---
@@ -113,6 +112,7 @@ pipeline {
                     }
                     
                     bat """
+                        set TMS_LOG_LEVEL=DEBUG
                         call venv\\Scripts\\activate.bat
                         set PYTHONPATH=%WORKSPACE%
                         echo "=== Проверка: какой Python используется ==="
