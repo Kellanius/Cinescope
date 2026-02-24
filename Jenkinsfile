@@ -127,6 +127,7 @@ pipeline {
                     echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
                     testit autotests_filter ^
                       --url %TMS_URL% ^
+                      --token %TMS_PRIVATE_TOKEN% ^
                       --configuration-id %TMS_CONFIGURATION_ID% ^
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
