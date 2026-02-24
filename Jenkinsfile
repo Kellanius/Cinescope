@@ -142,10 +142,10 @@ pipeline {
 
                     echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
                     if exist filter.txt (
-                        set /p FILTER=<filter.txt
-                        echo "Фильтр для --grep: %FILTER%"
-                        :: Важно! Команда для запуска именно playwright test, а не pytest
-                        npx playwright test --grep "%FILTER%"
+                        echo "Содержимое filter.txt:"
+                        type filter.txt
+                        echo "Передаём фильтр в playwright через PowerShell"
+                        powershell -Command "$filter = Get-Content filter.txt -Raw; Write-Host \"Filter: $filter\"; npx playwright test --grep \"$filter\""
                     ) else (
                         echo "Файл filter.txt не найден. Запуск всех тестов."
                         npx playwright test
@@ -153,6 +153,7 @@ pipeline {
                 """
             }
         }
+
     } // закрываем stages
 
     post {
