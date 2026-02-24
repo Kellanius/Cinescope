@@ -37,7 +37,7 @@ pipeline {
                             echo privateToken = %TOKEN% >> connection_config.ini
                             echo projectId = %PROJECT_ID% >> connection_config.ini
                             echo configurationId = %CONFIG_ID% >> connection_config.ini
-                            echo adapterMode = 0 >> connection_config.ini
+                            echo adapterMode = 2 >> connection_config.ini
                         """
                         echo "✅ Файл connection_config.ini успешно создан"
                         bat "type connection_config.ini"
