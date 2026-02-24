@@ -145,7 +145,7 @@ pipeline {
                         echo "Содержимое filter.txt:"
                         type filter.txt
                         echo "Передаём фильтр в playwright через PowerShell"
-                        powershell -Command "$filter = Get-Content filter.txt -Raw; Write-Host \"Filter: $filter\"; npx playwright test --grep \"$filter\""
+                        powershell -Command "\$filter = Get-Content filter.txt -Raw; Write-Host \"Filter: \$filter\"; npx playwright test --grep \"\$filter\""
                     ) else (
                         echo "Файл filter.txt не найден. Запуск всех тестов."
                         npx playwright test
