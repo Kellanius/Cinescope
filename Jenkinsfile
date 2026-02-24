@@ -118,13 +118,10 @@ pipeline {
 
         // --- НОВЫЙ ЭТАП: Фильтрация тестов с помощью Test IT CLI ---
         stage('Filter tests by Test Run ID') {
-            when {
-                expression { params.TEST_RUN_ID != '' }
-            }
+            when { expression { params.TEST_RUN_ID != '' } }
             steps {
                 bat """
                     call venv\\Scripts\\activate.bat
-                    set TMP_OUT=%WORKSPACE%\\filter_raw.txt
                     echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
                     testit autotests_filter ^
                       --url %TMS_URL% ^
@@ -132,22 +129,11 @@ pipeline {
                       --configuration-id %TMS_CONFIGURATION_ID% ^
                       --testrun-id ${params.TEST_RUN_ID} ^
                       --framework playwright ^
-                      --debug ^
-                      --output %FILTER_FILE% > %TMP_OUT% 2>&1
-                    echo "Команда завершилась с кодом %ERRORLEVEL%"
-                    if not exist %FILTER_FILE% (
-                        echo "Файл фильтра не создан, пробуем извлечь external_id из вывода"
-                        powershell -Command "$output = Get-Content '%TMP_OUT%' -Raw; $matches = [regex]::Matches($output, '''autotest_external_id'': ''([^'']+)'''); $ids = $matches | ForEach-Object { $_.Groups[1].Value }; if ($ids) { $filter = $ids -join '|'; Set-Content -Path '%FILTER_FILE%' -Value $filter } else { Write-Host 'External IDs не найдены' }"
-                    ) else (
-                        echo "Файл фильтра создан командой"
-                    )
-                    if exist %FILTER_FILE% (
-                        echo "=== Содержимое фильтра ==="
-                        type %FILTER_FILE%
-                    ) else (
-                        echo "Файл фильтра не создан даже после парсинга"
-                    )
-                    del %TMP_OUT%
+                      --debug > filter_debug.log 2>&1
+                    echo "=== Извлечение external_id из лога ==="
+                    powershell -Command "$log = Get-Content filter_debug.log -Raw; $matches = [regex]::Matches($log, '''autotest_external_id'': ''([^'']+)'''); if ($matches.Count -gt 0) { $ids = $matches | ForEach-Object { $_.Groups[1].Value }; $filter = $ids -join '|'; Set-Content -Path filter.txt -Value $filter; Write-Host \"External IDs: \$filter\" } else { Write-Host 'External IDs not found'; New-Item -Path filter.txt -ItemType file -Force | Out-Null }"
+                    echo "=== Содержимое фильтра ==="
+                    type filter.txt
                 """
             }
         }
@@ -159,17 +145,18 @@ pipeline {
                     set PYTHONPATH=%WORKSPACE%
                     set TMS_ADAPTER_MODE=1
                     set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
-
                     echo "=== Запуск тестов, соответствующих фильтру ==="
-                    :: Преобразуем содержимое filter.txt в строку для ключа -k
-                    :: Удаляем пустые строки и объединяем через or
-                    set /p FILTER=<%FILTER_FILE%
-                    set FILTER=%FILTER: =%
-                    python -m pytest tests/ -k "%FILTER%" -v --tb=short --alluredir=allure-results
+                    if exist filter.txt (
+                        set /p FILTER=<filter.txt
+                        echo "Фильтр: %FILTER%"
+                        python -m pytest tests/ -k "%FILTER%" -v --tb=short --alluredir=allure-results
+                    ) else (
+                        echo "Файл filter.txt не найден, запуск всех тестов"
+                        python -m pytest tests/ -v --tb=short --alluredir=allure-results
+                    )
                 """
             }
         }
-    }
 
     post {
         always {
