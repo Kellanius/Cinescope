@@ -19,6 +19,7 @@ from constants import Roles
 import pytest
 import time
 from playwright_helpers.page_object import CinescopeLoginPage, CinescopeMoviePage
+import testit
 
 
 
@@ -335,8 +336,9 @@ def context(browser):
 
 
 @pytest.fixture(scope="function")
-def page(context):
+def page(context, request):
     page = context.new_page()
+    request.node._last_page = page
     yield page
     page.close()
 
@@ -388,8 +390,25 @@ def auth_context(browser, registered_user):
 
 
 @pytest.fixture(scope="function")
-def auth_page(auth_context):
+def auth_page(auth_context, request):
     """Страница с уже авторизованным пользователем"""
     a_page = auth_context.new_page()
+    request.node._last_page = a_page
     yield a_page
     a_page.close()
+
+
+# Хук для скриншотов при падении
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+
+    if report.when == 'call' and report.failed:
+        page = getattr(item, '_last_page', None)
+        if page and hasattr(page, 'screenshot') and callable(page.screenshot):
+            try:
+                screenshot_bytes = page.screenshot()
+                testit.addAttachments(screenshot_bytes, "screenshot.png")
+            except Exception as e:
+                print(f"Не удалось сделать скриншот: {e}")
