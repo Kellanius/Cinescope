@@ -26,7 +26,7 @@ from playwright_helpers.page_object import CinescopeLoginPage, CinescopeMoviePag
 #os.environ["PWDEBUG"] = "0"
 faker = Faker()
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def test_user_factory():
     """
     Фикстура-фабрика генерации пользовательских данных для регистрации (с дабл паролем)"
@@ -38,7 +38,7 @@ def test_user_factory():
     return create
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def creation_test_user(test_user_factory):
     """
     Готовые данные для регистрации пользователя, созданные через фабрику
