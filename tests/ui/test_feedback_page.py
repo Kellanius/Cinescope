@@ -12,8 +12,8 @@ import testit
 
 
 
-@testit.externalId("b8063910-7573-480e-836d-1557c2d02169_auto")
-@testit.workItemIds(["b8063910-7573-480e-836d-1557c2d02169"])
+@testit.externalId("3_auto")
+@testit.workItemIds(3)
 @testit.displayName("Проверка написания отзыва")
 @testit.title("Автотест: написание отзыва")
 @allure.epic("Тестирование UI")
