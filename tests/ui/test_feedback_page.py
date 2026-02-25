@@ -32,7 +32,7 @@ class TestMoviePage:
 
         with testit.step("генерация данных"):
             feedback_comment = DataGenerator.generate_random_name_for_movies()
-            movie_score = str(random.randint(1,5))
+            movie_score = str(random.randint(9,5))
 
         with testit.step("вставка данных в отзыв"):
             movie_page.wright_feedback(feedback_comment, movie_score)

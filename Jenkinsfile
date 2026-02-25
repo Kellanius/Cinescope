@@ -175,6 +175,23 @@ pipeline {
     } // закрываем stages
 
     post {
+        success {
+            script {
+                // Если передан ID прогона и сборка успешна, завершаем прогон в Test IT как Completed
+                // Это особенно важно для rerun, когда прогон уже существовал и адаптер не завершил его автоматически.
+                if (params.TEST_RUN_ID) {
+                    echo "Сборка успешна. Завершаем прогон ${params.TEST_RUN_ID} в Test IT как Completed."
+                    withCredentials([string(credentialsId: 'testit-token', variable: 'TOKEN')]) {
+                        bat """
+                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" \
+                              -H "Authorization: PrivateToken ${TOKEN}" \
+                              -H "Content-Type: application/json" \
+                              -d "{\\"status\\": \\"Completed\\", \\"message\\": \\"Pipeline succeeded.\\"}"
+                        """
+                    }
+                }
+            }
+        }
         failure {
             script {
                 // Если передан ID прогона и сборка упала, завершаем прогон в Test IT со статусом Failed
