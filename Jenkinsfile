@@ -157,6 +157,9 @@ pipeline {
                         for /f "usebackq delims=" %%i in (filter.txt) do set "FILTER=%%i"
                         set "FILTER=!FILTER:\\ = !"
                         set "FILTER=!FILTER:\\.=.!"
+                        :: Заменяем разделитель | на or и оборачиваем в скобки
+                        set "FILTER=!FILTER:|= or !"
+                        set "FILTER=(!FILTER!)"
                         echo "Фильтр для -k: !FILTER!"
                         python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results --testit
                     ) else (
