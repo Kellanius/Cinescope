@@ -175,8 +175,23 @@ pipeline {
     } // закрываем stages
 
     post {
+        failure {
+            script {
+                // Если передан ID прогона и сборка упала, завершаем прогон в Test IT со статусом Failed
+                if (params.TEST_RUN_ID) {
+                    echo "Пайплайн упал. Завершаем прогон ${params.TEST_RUN_ID} в Test IT как Failed"
+                    withCredentials([string(credentialsId: 'testit-token', variable: 'TOKEN')]) {
+                        bat """
+                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" \
+                              -H "Authorization: PrivateToken ${TOKEN}" \
+                              -H "Content-Type: application/json" \
+                              -d "{\\"status\\": \\"Failed\\", \\"message\\": \\"Pipeline failed. Check Jenkins logs for details. Build: ${env.BUILD_URL}\\"}"
+                        """
+                    }
+                }
+            }
+        }
         always {
             echo '🏁 Сборка завершена.'
         }
     }
-}
