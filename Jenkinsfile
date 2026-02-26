@@ -89,18 +89,7 @@ pipeline {
                               -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
                               -e TEST_RUN_ID=${params.TEST_RUN_ID} ^
                               ghcr.io/kellanius/box-for-jenkins:latest ^
-                              sh -c "
-                                testit autotests_filter ^
-                                  --url \\\$TMS_URL ^
-                                  --token \\\$TMS_PRIVATE_TOKEN ^
-                                  --configuration-id \\\$TMS_CONFIGURATION_ID ^
-                                  --testrun-id \\\$TEST_RUN_ID ^
-                                  --framework playwright ^
-                                  --debug ^
-                                  --output filter.txt > filter_debug.log 2>&1
-                                cat filter.txt
-                                cat filter_debug.log
-                              "
+                              sh -c "testit autotests_filter --url \\\$TMS_URL --token \\\$TMS_PRIVATE_TOKEN --configuration-id \\\$TMS_CONFIGURATION_ID --testrun-id \\\$TEST_RUN_ID --framework playwright --debug --output filter.txt > filter_debug.log 2>&1; cat filter.txt; cat filter_debug.log"
                         """
                     }
                 }
@@ -121,21 +110,7 @@ pipeline {
                               -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
                               -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
                               ghcr.io/kellanius/box-for-jenkins:latest ^
-                              sh -c "
-                                export PYTHONPATH=/workspace
-                                if [ -f filter.txt ]; then
-                                  FILTER=\\\$(cat filter.txt)
-                                  FILTER=\${FILTER//\\\\ / }
-                                  FILTER=\${FILTER//\\\\./.}
-                                  FILTER=\${FILTER//|/ or }
-                                  FILTER=\"(\$FILTER)\"
-                                  echo \"Filter for -k: \$FILTER\"
-                                  pytest /workspace/tests -k \\\"\$FILTER\\\" -v --tb=short --alluredir=/workspace/allure-results --testit
-                                else
-                                  echo \"filter.txt not found. Running all tests.\"
-                                  pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit
-                                fi
-                              "
+                              sh -c "export PYTHONPATH=/workspace; if [ -f filter.txt ]; then FILTER=\\\$(cat filter.txt); FILTER=\${FILTER//\\\\ / }; FILTER=\${FILTER//\\\\./.}; FILTER=\${FILTER//|/ or }; FILTER=\"(\$FILTER)\"; echo \"Filter for -k: \$FILTER\"; pytest /workspace/tests -k \\\"\$FILTER\\\" -v --tb=short --alluredir=/workspace/allure-results --testit; else echo \"filter.txt not found. Running all tests.\"; pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit; fi"
                         """
                     }
                 }
