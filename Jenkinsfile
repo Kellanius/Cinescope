@@ -72,13 +72,14 @@ pipeline {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
                         bat '''
-                            docker run --rm -w /workspace ghcr.io/kellanius/box-for-jenkins:latest sh -c "
-                                python -c 'import greenlet; print(greenlet.__version__)' &&
-                                python -c 'from pydantic_core import __version__; print(__version__)' &&
-                                python -c 'import allure; print(allure.__version__)' &&
-                                python -c 'import playwright.sync_api; print(\\\"Playwright OK\\\")' &&
-                                echo 'All imports successful'
-                            "
+                            docker run --rm -w /workspace ghcr.io/kellanius/box-for-jenkins:latest python -c "
+        import greenlet, pydantic_core, allure, playwright.sync_api
+        print('greenlet:', greenlet.__version__)
+        print('pydantic_core:', pydantic_core.__version__)
+        print('allure:', allure.__version__)
+        print('playwright: OK')
+        print('All imports successful')
+        "
                         '''
                     }
                 }
