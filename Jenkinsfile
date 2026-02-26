@@ -56,59 +56,6 @@ pipeline {
             }
         }
 
-        stage('Setup VirtualEnv') {
-            steps {
-                echo '🔧 Создаём виртуальное окружение...'
-                bat """
-                    echo "=== Текущий PATH ==="
-                    echo %PATH%
-                    echo "=== Проверка Node.js ==="
-                    where node
-
-                    "%PYTHON%" -m venv venv
-                    call venv\\Scripts\\activate.bat
-                    python -m pip install --upgrade pip
-
-                    :: Удаляем старую заглушку testit.py, если она есть
-                    if exist testit.py del testit.py
-
-                    echo "=== Удаление старых версий testit-пакетов ==="
-                    pip uninstall testit-adapter-pytest testit-python-commons testit-api-client -y
-
-                    echo "=== Установка совместимых версий для Test IT 5.6 ==="
-                    pip install testit-api-client || exit /b 1
-                    pip install testit-python-commons || exit /b 1
-                    pip install testit-adapter-pytest || exit /b 1
-
-                    echo "=== Установка остальных зависимостей ==="
-                    pip install -r requirements.txt
-                    pip install allure-pytest playwright faker
-                    playwright install
-
-                    echo "=== Установка testit-cli (если ещё нет) ==="
-                    pip install testit-cli || exit /b 1
-
-                    echo "=== Установка testit-adapter-playwright через npm ==="
-                    where node || (echo Node.js not found && exit /b 1)
-                    npm install -g testit-adapter-playwright
-
-                    echo "=== Переустановка greenlet для устранения проблем с импортом ==="
-                    pip uninstall greenlet -y
-                    pip install greenlet==3.3.2 --force-reinstall --no-cache-dir
-                    python -c "import greenlet; print('✅ greenlet imported successfully')" || (echo "❌ Ошибка импорта greenlet" && exit 1)
-
-                    echo "=== Переустановка pydantic и pydantic-core ==="
-                    pip uninstall pydantic pydantic-core -y
-                    pip install pydantic==2.12.5 --force-reinstall --no-cache-dir
-                    pip install pydantic-core==2.41.5 --force-reinstall --no-cache-dir
-                    python -c "from pydantic_core import __version__; print('✅ pydantic-core imported successfully')" || (echo "❌ Ошибка импорта pydantic-core" && exit 1)
-
-                    echo "=== Проверка установленных версий ==="
-                    pip show testit-api-client testit-python-commons testit-adapter-pytest testit-cli
-                """
-            }
-        }
-
         stage('Clear pytest cache') {
             steps {
                 bat 'if exist .pytest_cache rmdir /s /q .pytest_cache'
@@ -118,57 +65,66 @@ pipeline {
         stage('Filter tests by Test Run ID') {
             when { expression { params.TEST_RUN_ID != '' } }
             steps {
-                bat """
-                    call venv\\Scripts\\activate.bat
-                    echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
-                    testit autotests_filter ^
-                      --url %TMS_URL% ^
-                      --token %TMS_PRIVATE_TOKEN% ^
-                      --configuration-id %TMS_CONFIGURATION_ID% ^
-                      --testrun-id ${params.TEST_RUN_ID} ^
-                      --framework playwright ^
-                      --debug ^
-                      --output filter.txt > filter_debug.log 2>&1
-                    echo "Команда завершилась с кодом %ERRORLEVEL%"
-                    echo "=== Содержимое filter.txt (фильтр для pytest) ==="
-                    type filter.txt
-                    echo "=== Содержимое filter_debug.log (для отладки) ==="
-                    type filter_debug.log
-                """
+                // ВАЖНО! ЭТОТ ЭТАП ЗАПУСКАЕМ ТОЖЕ В КОНТЕЙНЕРЕ
+                script {
+                    docker.image('kellanius/box-for-jenkins:latest').inside() {
+                        bat """
+                            call venv\\Scripts\\activate.bat
+                            echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
+                            testit autotests_filter ^
+                              --url %TMS_URL% ^
+                              --token %TMS_PRIVATE_TOKEN% ^
+                              --configuration-id %TMS_CONFIGURATION_ID% ^
+                              --testrun-id ${params.TEST_RUN_ID} ^
+                              --framework playwright ^
+                              --debug ^
+                              --output filter.txt > filter_debug.log 2>&1
+                            echo "Команда завершилась с кодом %ERRORLEVEL%"
+                            echo "=== Содержимое filter.txt (фильтр для pytest) ==="
+                            type filter.txt
+                            echo "=== Содержимое filter_debug.log (для отладки) ==="
+                            type filter_debug.log
+                        """
+                    }
+                }
             }
         }
 
         stage('Run Tests') {
             steps {
-                bat """
-                    call venv\\Scripts\\activate.bat
-                    echo "=== Диагностика переменных Test IT ==="
-                    echo "TMS_ADAPTER_MODE=1"
-                    echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
-                    echo "TMS_URL=%TMS_URL%"
+                script {
+                    docker.image('kellanius/box-for-jenkins:latest').inside() {
+                        bat """
+                            call venv\\Scripts\\activate.bat
+                            echo "=== Диагностика переменных Test IT ==="
+                            echo "TMS_ADAPTER_MODE=1"
+                            echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
+                            echo "TMS_URL=%TMS_URL%"
 
-                    setlocal enabledelayedexpansion
-                    set PYTHONPATH=%WORKSPACE%
-                    set TMS_ADAPTER_MODE=1
-                    set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
+                            setlocal enabledelayedexpansion
+                            set PYTHONPATH=%WORKSPACE%
+                            set TMS_ADAPTER_MODE=1
+                            set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
 
-                    echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
-                    if exist filter.txt (
-                        for /f "usebackq delims=" %%i in (filter.txt) do set "FILTER=%%i"
-                        set "FILTER=!FILTER:\\ = !"
-                        set "FILTER=!FILTER:\\.=.!"
-                        :: Заменяем разделитель | на or и оборачиваем в скобки
-                        set "FILTER=!FILTER:|= or !"
-                        set "FILTER=(!FILTER!)"
-                        echo "Фильтр для -k: !FILTER!"
-                        python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results --testit
-                    ) else (
-                        echo "Файл filter.txt не найден. Запуск всех тестов."
-                        python -m pytest tests/ -v --tb=short --alluredir=allure-results --testit
-                    )
+                            echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
+                            if exist filter.txt (
+                                for /f "usebackq delims=" %%i in (filter.txt) do set "FILTER=%%i"
+                                set "FILTER=!FILTER:\\ = !"
+                                set "FILTER=!FILTER:\\.=.!"
+                                :: Заменяем разделитель | на or и оборачиваем в скобки
+                                set "FILTER=!FILTER:|= or !"
+                                set "FILTER=(!FILTER!)"
+                                echo "Фильтр для -k: !FILTER!"
+                                python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results --testit
+                            ) else (
+                                echo "Файл filter.txt не найден. Запуск всех тестов."
+                                python -m pytest tests/ -v --tb=short --alluredir=allure-results --testit
+                            )
 
-                    echo "=== Завершено. Код возврата: %ERRORLEVEL% ==="
-                """
+                            echo "=== Завершено. Код возврата: %ERRORLEVEL% ==="
+                        """
+                    }
+                }
             }
         }
 
