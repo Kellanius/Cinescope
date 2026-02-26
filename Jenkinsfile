@@ -68,21 +68,7 @@ pipeline {
                           -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
                           -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
                           ghcr.io/kellanius/box-for-jenkins:latest ^
-                          sh -c "
-                            testit autotests_filter \\
-                              --url \$TMS_URL \\
-                              --token \$TMS_PRIVATE_TOKEN \\
-                              --configuration-id \$TMS_CONFIGURATION_ID \\
-                              --testrun-id ${params.TEST_RUN_ID} \\
-                              --framework playwright \\
-                              --debug \\
-                              --output filter.txt > filter_debug.log 2>&1;
-                            echo 'Команда завершилась с кодом \$?';
-                            echo '=== filter.txt ===';
-                            cat filter.txt;
-                            echo '=== filter_debug.log ===';
-                            cat filter_debug.log
-                          "
+                          sh -c "testit autotests_filter --url \$TMS_URL --token \$TMS_PRIVATE_TOKEN --configuration-id \$TMS_CONFIGURATION_ID --testrun-id ${params.TEST_RUN_ID} --framework playwright --debug --output filter.txt > filter_debug.log 2>&1; echo 'Команда завершилась с кодом '\$?'; cat filter.txt; cat filter_debug.log"
                     """
                 }
             }
@@ -103,18 +89,7 @@ pipeline {
                           -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
                           -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
                           ghcr.io/kellanius/box-for-jenkins:latest ^
-                          sh -c "
-                            export PYTHONPATH=/workspace;
-                            if [ -f filter.txt ]; then
-                              FILTER=\$(cat filter.txt | sed 's/\\\\ / /g; s/\\\\././g; s/|/ or /g');
-                              FILTER=\"(\$FILTER)\";
-                              echo 'Фильтр для -k: '\$FILTER;
-                              pytest /workspace/tests -k \"\$FILTER\" -v --tb=short --alluredir=/workspace/allure-results --testit;
-                            else
-                              echo 'Файл filter.txt не найден. Запуск всех тестов.';
-                              pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit;
-                            fi
-                          "
+                          sh -c "export PYTHONPATH=/workspace; if [ -f filter.txt ]; then FILTER=\\\$(cat filter.txt | sed 's/\\\\ / /g; s/\\\\././g; s/|/ or /g'); FILTER=\\\"(\\\$FILTER)\\\"; echo 'Фильтр для -k: '\\\$FILTER; pytest /workspace/tests -k \\\"\\\$FILTER\\\" -v --tb=short --alluredir=/workspace/allure-results --testit; else echo 'Файл filter.txt не найден. Запуск всех тестов.'; pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit; fi"
                     """
                 }
             }
