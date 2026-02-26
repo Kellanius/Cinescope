@@ -20,7 +20,7 @@ pipeline {
             steps {
                 echo 'Клонируем репозиторий...'
                 git branch: 'main',
-                    url: 'https://github.com/Kellanius/Cinescope.git',
+                    url: 'https://github.com/kellanius/Cinescope.git',
                     credentialsId: 'github-token'
             }
         }
