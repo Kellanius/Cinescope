@@ -67,8 +67,9 @@ pipeline {
                           -e TMS_URL=%TMS_URL% ^
                           -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
                           -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
+                          -e TEST_RUN_ID=${params.TEST_RUN_ID} ^
                           ghcr.io/kellanius/box-for-jenkins:latest ^
-                          sh -c "testit autotests_filter --url \\$TMS_URL --token \\$TMS_PRIVATE_TOKEN --configuration-id \\$TMS_CONFIGURATION_ID --testrun-id ${params.TEST_RUN_ID} --framework playwright --debug --output filter.txt > filter_debug.log 2>&1; echo Filter command finished with code \\$?; cat filter.txt; cat filter_debug.log"
+                          sh -c "testit autotests_filter --url \\$TMS_URL --token \\$TMS_PRIVATE_TOKEN --configuration-id \\$TMS_CONFIGURATION_ID --testrun-id \\$TEST_RUN_ID --framework playwright --debug --output filter.txt > filter_debug.log 2>&1; echo Filter command finished with code \\$?; cat filter.txt; cat filter_debug.log"
                     """
                 }
             }
