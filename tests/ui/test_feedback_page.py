@@ -34,11 +34,11 @@ class TestMoviePage:
             feedback_comment = DataGenerator.generate_random_name_for_movies()
             movie_score = str(random.randint(1,5))
 
-        with testit.step("вставка данных в отзыв"):
+        with testit.step(f"вставка данных в отзыв: комментарий '{feedback_comment}', оценка {movie_score}"):
             movie_page.wright_feedback(feedback_comment, movie_score)
 
         with testit.step("ожидание сообщения о создании отзыва"):
             movie_page.check_pop_up_element_with_text("Отзыв успешно создан")
 
-        with testit.step("проверка элементов"):
+        with testit.step(f"проверка элементов: ожидаемый комментарий '{feedback_comment}', оценка {movie_score}"):
             movie_page.assert_feedback(feedback_comment, movie_score)
