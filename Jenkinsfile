@@ -7,8 +7,6 @@ pipeline {
     }
 
     environment {
-        PYTHON = "C:\\python312\\python.exe"
-        PROJECT_ROOT = "%WORKSPACE%"
         // Переменные для Test IT (подставляются из credentials)
         TMS_URL = credentials('testit-url')
         TMS_PRIVATE_TOKEN = credentials('testit-token')
@@ -16,8 +14,6 @@ pipeline {
         TMS_CONFIGURATION_ID = credentials('testit-config-id')
         SUPER_ADMIN_USERNAME = credentials('super-admin-email')
         SUPER_ADMIN_PASSWORD = credentials('super-admin-password')
-        // Путь к файлу фильтра (больше не используется, но оставлен на всякий случай)
-        FILTER_FILE = "%WORKSPACE%\\testit-filter.txt"
     }
 
     stages {
@@ -67,21 +63,21 @@ pipeline {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
                         docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
-                            bat """
+                            sh """
                                 echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
-                                testit autotests_filter ^
-                                  --url %TMS_URL% ^
-                                  --token %TMS_PRIVATE_TOKEN% ^
-                                  --configuration-id %TMS_CONFIGURATION_ID% ^
-                                  --testrun-id ${params.TEST_RUN_ID} ^
-                                  --framework playwright ^
-                                  --debug ^
+                                testit autotests_filter \\
+                                  --url \$TMS_URL \\
+                                  --token \$TMS_PRIVATE_TOKEN \\
+                                  --configuration-id \$TMS_CONFIGURATION_ID \\
+                                  --testrun-id ${params.TEST_RUN_ID} \\
+                                  --framework playwright \\
+                                  --debug \\
                                   --output filter.txt > filter_debug.log 2>&1
-                                echo "Команда завершилась с кодом %ERRORLEVEL%"
+                                echo "Команда завершилась с кодом \$?"
                                 echo "=== Содержимое filter.txt (фильтр для pytest) ==="
-                                type filter.txt
+                                cat filter.txt
                                 echo "=== Содержимое filter_debug.log (для отладки) ==="
-                                type filter_debug.log
+                                cat filter_debug.log
                             """
                         }
                     }
@@ -94,47 +90,39 @@ pipeline {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
                         docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
-                            bat """
+                            sh """
                                 echo "=== Диагностика переменных Test IT ==="
                                 echo "TMS_ADAPTER_MODE=1"
                                 echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
-                                echo "TMS_URL=%TMS_URL%"
+                                echo "TMS_URL=\$TMS_URL"
 
-                                setlocal enabledelayedexpansion
-                                set PYTHONPATH=%WORKSPACE%
-                                set TMS_ADAPTER_MODE=1
-                                set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
+                                export PYTHONPATH=/workspace
+                                export TMS_ADAPTER_MODE=1
+                                export TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
 
                                 echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
-                                if exist filter.txt (
-                                    for /f "usebackq delims=" %%i in (filter.txt) do set "FILTER=%%i"
-                                    set "FILTER=!FILTER:\\ = !"
-                                    set "FILTER=!FILTER:\\.=.!"
-                                    :: Заменяем разделитель | на or и оборачиваем в скобки
-                                    set "FILTER=!FILTER:|= or !"
-                                    set "FILTER=(!FILTER!)"
-                                    echo "Фильтр для -k: !FILTER!"
-                                    python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results --testit
-                                ) else (
+                                if [ -f filter.txt ]; then
+                                    FILTER=\$(cat filter.txt | sed 's/\\\\ / /g; s/\\\\././g; s/|/ or /g')
+                                    FILTER="(\$FILTER)"
+                                    echo "Фильтр для -k: \$FILTER"
+                                    pytest /workspace/tests -k "\$FILTER" -v --tb=short --alluredir=/workspace/allure-results --testit
+                                else
                                     echo "Файл filter.txt не найден. Запуск всех тестов."
-                                    python -m pytest tests/ -v --tb=short --alluredir=allure-results --testit
-                                )
+                                    pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit
+                                fi
 
-                                echo "=== Завершено. Код возврата: %ERRORLEVEL% ==="
+                                echo "=== Завершено. Код возврата: \$? ==="
                             """
                         }
                     }
                 }
             }
         }
-
-    } // закрываем stages
+    } // stages
 
     post {
         success {
             script {
-                // Если передан ID прогона и сборка успешна, завершаем прогон в Test IT как Completed
-                // Это особенно важно для rerun, когда прогон уже существовал и адаптер не завершил его автоматически.
                 if (params.TEST_RUN_ID) {
                     echo "Сборка успешна. Завершаем прогон ${params.TEST_RUN_ID} в Test IT как Completed."
                     withCredentials([string(credentialsId: 'testit-token', variable: 'TOKEN')]) {
@@ -150,7 +138,6 @@ pipeline {
         }
         failure {
             script {
-                // Если передан ID прогона и сборка упала, завершаем прогон в Test IT со статусом Failed
                 if (params.TEST_RUN_ID) {
                     echo "Пайплайн упал. Завершаем прогон ${params.TEST_RUN_ID} в Test IT как Failed"
                     withCredentials([string(credentialsId: 'testit-token', variable: 'TOKEN')]) {
@@ -168,5 +155,4 @@ pipeline {
             echo '🏁 Сборка завершена.'
         }
     }
-
 }
