@@ -62,8 +62,9 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
+                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace") {
                             sh """
+                                cd /workspace
                                 echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
                                 testit autotests_filter \\
                                   --url \$TMS_URL \\
@@ -89,8 +90,9 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
+                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace") {
                             sh """
+                                cd /workspace
                                 echo "=== Диагностика переменных Test IT ==="
                                 echo "TMS_ADAPTER_MODE=1"
                                 echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
