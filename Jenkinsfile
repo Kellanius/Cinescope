@@ -110,7 +110,7 @@ pipeline {
                               -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
                               -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
                               ghcr.io/kellanius/box-for-jenkins:latest ^
-                              sh -c "export PYTHONPATH=/workspace; if [ -f filter.txt ]; then FILTER=\\\$(cat filter.txt | sed 's/\\\\\\\\ / /g; s/\\\\\\\\././g; s/|/ or /g'); FILTER=\\\"(\\\$FILTER)\\\"; echo \\\"Filter for -k: \\\$FILTER\\\"; pytest /workspace/tests -k \\\"\\\$FILTER\\\" -v --tb=short --alluredir=/workspace/allure-results --testit; else echo \\\"filter.txt not found. Running all tests.\\\"; pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit; fi"
+                              sh -c "if [ -f filter.txt ]; then FILTER=\\\$(cat filter.txt | sed 's/\\\\\\\\ / /g; s/\\\\\\\\././g; s/|/ or /g'); FILTER=\\\"(\\\$FILTER)\\\"; echo \\\"Filter for -k: \\\$FILTER\\\"; pytest /workspace/tests -k \\\"\\\$FILTER\\\" -v --tb=short --alluredir=/workspace/allure-results --testit; else echo \\\"filter.txt not found. Running all tests.\\\"; pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit; fi"
                         """
                     }
                 }
