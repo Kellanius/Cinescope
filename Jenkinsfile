@@ -83,13 +83,18 @@ pipeline {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
                         bat """
-                            docker run --rm -v ${WORKSPACE}:/workspace -w /workspace ^
-                              -e TMS_URL=%TMS_URL% ^
-                              -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
-                              -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
-                              -e TEST_RUN_ID=${params.TEST_RUN_ID} ^
+                            docker run --rm -v %WORKSPACE%:/workspace -w /workspace ^
                               ghcr.io/kellanius/box-for-jenkins:latest ^
-                              sh -c "testit autotests_filter --url \\\$TMS_URL --token \\\$TMS_PRIVATE_TOKEN --configuration-id \\\$TMS_CONFIGURATION_ID --testrun-id \\\$TEST_RUN_ID --framework playwright --debug --output filter.txt > filter_debug.log 2>&1; cat filter.txt; cat filter_debug.log"
+                              testit autotests_filter ^
+                                --url %TMS_URL% ^
+                                --token %TMS_PRIVATE_TOKEN% ^
+                                --configuration-id %TMS_CONFIGURATION_ID% ^
+                                --testrun-id ${params.TEST_RUN_ID} ^
+                                --framework playwright ^
+                                --debug ^
+                                --output filter.txt > filter_debug.log 2>&1
+                            type filter.txt
+                            type filter_debug.log
                         """
                     }
                 }
@@ -100,18 +105,32 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        bat """
+                        bat '''
                             docker run --rm -v %WORKSPACE%:/workspace -w /workspace ^
-                              -e TMS_URL=%TMS_URL% ^
-                              -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
-                              -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
                               -e TMS_ADAPTER_MODE=1 ^
-                              -e TMS_TEST_RUN_ID=${params.TEST_RUN_ID} ^
+                              -e TMS_TEST_RUN_ID=''' + params.TEST_RUN_ID + ''' ^
                               -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
                               -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
                               ghcr.io/kellanius/box-for-jenkins:latest ^
-                              python -c "import os, subprocess, sys; filter_file = '/workspace/filter.txt'; test_dir = '/workspace/tests'; allure_dir = '/workspace/allure-results'; cmd = [sys.executable, '-m', 'pytest', test_dir]; use_filter = os.path.exists(filter_file); if use_filter: f = open(filter_file); raw_filter = f.read().strip(); f.close(); clean_filter = raw_filter.replace('\\\\\\\\ ', ' ').replace('\\\\\\\\.', '.').replace('|', ' or '); filter_expr = '(' + clean_filter + ')'; print('Filter for -k:', filter_expr); cmd.extend(['-k', filter_expr, '-v', '--tb=short', '--alluredir=' + allure_dir, '--testit']); if not use_filter: print('filter.txt not found. Running all tests.'); cmd.extend(['-v', '--tb=short', '--alluredir=' + allure_dir, '--testit']); sys.exit(subprocess.run(cmd).returncode)"
-                        """
+                              python -c "
+        import os, subprocess, sys
+        filter_file = '/workspace/filter.txt'
+        test_dir = '/workspace/tests'
+        allure_dir = '/workspace/allure-results'
+        cmd = [sys.executable, '-m', 'pytest', test_dir]
+        if os.path.exists(filter_file):
+            with open(filter_file) as f:
+                raw_filter = f.read().strip()
+            clean_filter = raw_filter.replace('\\\\\\\\ ', ' ').replace('\\\\\\\\.', '.').replace('|', ' or ')
+            filter_expr = '(' + clean_filter + ')'
+            print('Filter for -k:', filter_expr)
+            cmd.extend(['-k', filter_expr, '-v', '--tb=short', '--alluredir=' + allure_dir, '--testit'])
+        else:
+            print('filter.txt not found. Running all tests.')
+            cmd.extend(['-v', '--tb=short', '--alluredir=' + allure_dir, '--testit'])
+        sys.exit(subprocess.run(cmd).returncode)
+        "
+                        '''
                     }
                 }
             }
