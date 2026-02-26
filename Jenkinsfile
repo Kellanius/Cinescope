@@ -100,18 +100,31 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        bat """
-                            docker run --rm -v ${WORKSPACE}:/workspace -w /workspace ^
+                        bat '''
+                            docker run --rm -v "${WORKSPACE}:/workspace" -w /workspace ^
                               -e TMS_URL=%TMS_URL% ^
                               -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
                               -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
                               -e TMS_ADAPTER_MODE=1 ^
-                              -e TMS_TEST_RUN_ID=${params.TEST_RUN_ID} ^
+                              -e TMS_TEST_RUN_ID=''' + params.TEST_RUN_ID + ''' ^
                               -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
                               -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
                               ghcr.io/kellanius/box-for-jenkins:latest ^
-                              sh -c "if [ -f filter.txt ]; then FILTER=\\\$(cat filter.txt | sed 's/\\\\\\\\ / /g; s/\\\\\\\\././g; s/|/ or /g'); FILTER=\\\"(\\\$FILTER)\\\"; echo \\\"Filter for -k: \\\$FILTER\\\"; pytest /workspace/tests -k \\\"\\\$FILTER\\\" -v --tb=short --alluredir=/workspace/allure-results --testit; else echo \\\"filter.txt not found. Running all tests.\\\"; pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit; fi"
-                        """
+                              python -c "
+        import os, subprocess
+        if os.path.exists('filter.txt'):
+            with open('filter.txt') as f:
+                raw_filter = f.read().strip()
+            clean_filter = raw_filter.replace('\\\\ ', ' ').replace('\\\\.', '.').replace('|', ' or ')
+            filter_expr = '(' + clean_filter + ')'
+            print('Filter for -k:', filter_expr)
+            cmd = ['pytest', '/workspace/tests', '-k', filter_expr, '-v', '--tb=short', '--alluredir=/workspace/allure-results', '--testit']
+        else:
+            print('filter.txt not found. Running all tests.')
+            cmd = ['pytest', '/workspace/tests', '-v', '--tb=short', '--alluredir=/workspace/allure-results', '--testit']
+        subprocess.run(cmd, check=True)
+        "
+                        '''
                     }
                 }
             }
