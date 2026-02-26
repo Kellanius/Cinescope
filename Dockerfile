@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     gnupg \
-    sed \                     # нужен для обработки фильтра
+    sed \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. Установка Node.js
