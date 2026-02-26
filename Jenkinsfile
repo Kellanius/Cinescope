@@ -105,32 +105,15 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        bat '''
+                        bat """
                             docker run --rm -v %WORKSPACE%:/workspace -w /workspace ^
                               -e TMS_ADAPTER_MODE=1 ^
-                              -e TMS_TEST_RUN_ID=''' + params.TEST_RUN_ID + ''' ^
+                              -e TMS_TEST_RUN_ID=${params.TEST_RUN_ID} ^
                               -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
                               -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
                               ghcr.io/kellanius/box-for-jenkins:latest ^
-                              python -c "
-        import os, subprocess, sys
-        filter_file = '/workspace/filter.txt'
-        test_dir = '/workspace/tests'
-        allure_dir = '/workspace/allure-results'
-        cmd = [sys.executable, '-m', 'pytest', test_dir]
-        if os.path.exists(filter_file):
-            with open(filter_file) as f:
-                raw_filter = f.read().strip()
-            clean_filter = raw_filter.replace('\\\\\\\\ ', ' ').replace('\\\\\\\\.', '.').replace('|', ' or ')
-            filter_expr = '(' + clean_filter + ')'
-            print('Filter for -k:', filter_expr)
-            cmd.extend(['-k', filter_expr, '-v', '--tb=short', '--alluredir=' + allure_dir, '--testit'])
-        else:
-            print('filter.txt not found. Running all tests.')
-            cmd.extend(['-v', '--tb=short', '--alluredir=' + allure_dir, '--testit'])
-        sys.exit(subprocess.run(cmd).returncode)
-        "
-                        '''
+                              python -c "import os,subprocess,sys;f='/workspace/filter.txt';t='/workspace/tests';a='/workspace/allure-results';c=[sys.executable,'-m','pytest',t];r='';p=print;e=os.path.exists(f);exec('if e:\\n  with open(f) as x: r=x.read().strip()\\n  r=r.replace(\\'\\\\\\\\ \\',\\' \\').replace(\\'\\\\\\\\.\\',\\'.\\').replace(\\'|\\',\\' or \\')\\n  p(\\'Filter for -k: (\\'+r+\\')\\')\\n  c.extend([\\'-k\\',\\'(\\'+r+\\')\\",\\'-v\\',\\'--tb=short\\',\\'--alluredir=\\'+a,\\'--testit\\'])\\nelse:\\n  p(\\'filter.txt not found. Running all tests.\\')\\n  c.extend([\\'-v\\',\\'--tb=short\\',\\'--alluredir=\\'+a,\\'--testit\\'])');sys.exit(subprocess.run(c).returncode)"
+                        """
                     }
                 }
             }
