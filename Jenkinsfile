@@ -9,7 +9,6 @@ pipeline {
     environment {
         PYTHON = "C:\\python312\\python.exe"
         PROJECT_ROOT = "%WORKSPACE%"
-        VENV = "%WORKSPACE%\\venv"
         // Переменные для Test IT (подставляются из credentials)
         TMS_URL = credentials('testit-url')
         TMS_PRIVATE_TOKEN = credentials('testit-token')
@@ -67,9 +66,8 @@ pipeline {
             steps {
                 // ВАЖНО! ЭТОТ ЭТАП ЗАПУСКАЕМ ТОЖЕ В КОНТЕЙНЕРЕ
                 script {
-                    docker.image('kellanius/box-for-jenkins:latest').inside() {
+                    docker.image('kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
                         bat """
-                            call venv\\Scripts\\activate.bat
                             echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
                             testit autotests_filter ^
                               --url %TMS_URL% ^
@@ -93,9 +91,8 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    docker.image('kellanius/box-for-jenkins:latest').inside() {
+                    docker.image('kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
                         bat """
-                            call venv\\Scripts\\activate.bat
                             echo "=== Диагностика переменных Test IT ==="
                             echo "TMS_ADAPTER_MODE=1"
                             echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
