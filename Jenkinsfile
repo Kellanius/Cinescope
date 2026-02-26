@@ -7,12 +7,10 @@ pipeline {
     }
 
     environment {
-        // Переменные для Test IT (из Jenkins credentials)
         TMS_URL = credentials('testit-url')
         TMS_PRIVATE_TOKEN = credentials('testit-token')
         TMS_PROJECT_ID = credentials('testit-project-id')
         TMS_CONFIGURATION_ID = credentials('testit-config-id')
-        // Учётные данные для тестового окружения
         SUPER_ADMIN_USERNAME = credentials('super-admin-email')
         SUPER_ADMIN_PASSWORD = credentials('super-admin-password')
     }
@@ -62,15 +60,14 @@ pipeline {
             when { expression { params.TEST_RUN_ID != '' } }
             steps {
                 script {
-                    // Явный запуск контейнера через docker run, чтобы контролировать рабочую директорию
-                    sh """
-                        docker run --rm \\
-                          -v "${WORKSPACE}:/workspace" \\
-                          -w /workspace \\
-                          -e TMS_URL="${TMS_URL}" \\
-                          -e TMS_PRIVATE_TOKEN="${TMS_PRIVATE_TOKEN}" \\
-                          -e TMS_CONFIGURATION_ID="${TMS_CONFIGURATION_ID}" \\
-                          ghcr.io/kellanius/box-for-jenkins:latest \\
+                    bat """
+                        docker run --rm ^
+                          -v "${WORKSPACE}:/workspace" ^
+                          -w /workspace ^
+                          -e TMS_URL=%TMS_URL% ^
+                          -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
+                          -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
+                          ghcr.io/kellanius/box-for-jenkins:latest ^
                           sh -c "
                             testit autotests_filter \\
                               --url \$TMS_URL \\
@@ -94,18 +91,18 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    sh """
-                        docker run --rm \\
-                          -v "${WORKSPACE}:/workspace" \\
-                          -w /workspace \\
-                          -e TMS_URL="${TMS_URL}" \\
-                          -e TMS_PRIVATE_TOKEN="${TMS_PRIVATE_TOKEN}" \\
-                          -e TMS_CONFIGURATION_ID="${TMS_CONFIGURATION_ID}" \\
-                          -e TMS_ADAPTER_MODE=1 \\
-                          -e TMS_TEST_RUN_ID="${params.TEST_RUN_ID}" \\
-                          -e SUPER_ADMIN_USERNAME="${SUPER_ADMIN_USERNAME}" \\
-                          -e SUPER_ADMIN_PASSWORD="${SUPER_ADMIN_PASSWORD}" \\
-                          ghcr.io/kellanius/box-for-jenkins:latest \\
+                    bat """
+                        docker run --rm ^
+                          -v "${WORKSPACE}:/workspace" ^
+                          -w /workspace ^
+                          -e TMS_URL=%TMS_URL% ^
+                          -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
+                          -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
+                          -e TMS_ADAPTER_MODE=1 ^
+                          -e TMS_TEST_RUN_ID=${params.TEST_RUN_ID} ^
+                          -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
+                          -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
+                          ghcr.io/kellanius/box-for-jenkins:latest ^
                           sh -c "
                             export PYTHONPATH=/workspace;
                             if [ -f filter.txt ]; then
@@ -131,9 +128,9 @@ pipeline {
                     echo "Сборка успешна. Завершаем прогон ${params.TEST_RUN_ID} в Test IT как Completed."
                     withCredentials([string(credentialsId: 'testit-token', variable: 'TOKEN')]) {
                         bat """
-                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" \
-                              -H "Authorization: PrivateToken ${TOKEN}" \
-                              -H "Content-Type: application/json" \
+                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" ^
+                              -H "Authorization: PrivateToken ${TOKEN}" ^
+                              -H "Content-Type: application/json" ^
                               -d "{\\"status\\": \\"Completed\\", \\"message\\": \\"Pipeline succeeded.\\"}"
                         """
                     }
@@ -146,9 +143,9 @@ pipeline {
                     echo "Пайплайн упал. Завершаем прогон ${params.TEST_RUN_ID} в Test IT как Failed"
                     withCredentials([string(credentialsId: 'testit-token', variable: 'TOKEN')]) {
                         bat """
-                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" \
-                              -H "Authorization: PrivateToken ${TOKEN}" \
-                              -H "Content-Type: application/json" \
+                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" ^
+                              -H "Authorization: PrivateToken ${TOKEN}" ^
+                              -H "Content-Type: application/json" ^
                               -d "{\\"status\\": \\"Failed\\", \\"message\\": \\"Pipeline failed. Check Jenkins logs for details. Build: ${env.BUILD_URL}\\"}"
                         """
                     }
