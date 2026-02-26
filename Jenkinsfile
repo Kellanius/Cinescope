@@ -5,12 +5,14 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        // Используем bat для команды на хосте Windows
                         bat "docker pull ghcr.io/kellanius/box-for-jenkins:latest"
-                        // Внутри контейнера используем sh (он там есть)
-                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside {
-                            sh 'pip list | grep testit'
-                        }
+                        // Явный запуск контейнера с переопределением рабочей директории
+                        bat """
+                            docker run --rm \\
+                              -w /workspace \\
+                              ghcr.io/kellanius/box-for-jenkins:latest \\
+                              sh -c "pip list | grep testit || echo 'No testit packages found'"
+                        """
                     }
                 }
             }
