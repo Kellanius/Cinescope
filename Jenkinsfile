@@ -100,31 +100,18 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        bat '''
-                            docker run --rm -v "${WORKSPACE}:/workspace" -w /workspace ^
+                        bat """
+                            docker run --rm -v %WORKSPACE%:/workspace -w /workspace ^
                               -e TMS_URL=%TMS_URL% ^
                               -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
                               -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
                               -e TMS_ADAPTER_MODE=1 ^
-                              -e TMS_TEST_RUN_ID=''' + params.TEST_RUN_ID + ''' ^
+                              -e TMS_TEST_RUN_ID=${params.TEST_RUN_ID} ^
                               -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
                               -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
                               ghcr.io/kellanius/box-for-jenkins:latest ^
-                              python -c "
-        import os, subprocess
-        if os.path.exists('filter.txt'):
-            with open('filter.txt') as f:
-                raw_filter = f.read().strip()
-            clean_filter = raw_filter.replace('\\\\ ', ' ').replace('\\\\.', '.').replace('|', ' or ')
-            filter_expr = '(' + clean_filter + ')'
-            print('Filter for -k:', filter_expr)
-            cmd = ['pytest', '/workspace/tests', '-k', filter_expr, '-v', '--tb=short', '--alluredir=/workspace/allure-results', '--testit']
-        else:
-            print('filter.txt not found. Running all tests.')
-            cmd = ['pytest', '/workspace/tests', '-v', '--tb=short', '--alluredir=/workspace/allure-results', '--testit']
-        subprocess.run(cmd, check=True)
-        "
-                        '''
+                              python -c "import os, subprocess, sys; filter_file = '/workspace/filter.txt'; test_dir = '/workspace/tests'; allure_dir = '/workspace/allure-results'; cmd = [sys.executable, '-m', 'pytest', test_dir]; if os.path.exists(filter_file): with open(filter_file) as f: raw_filter = f.read().strip(); clean_filter = raw_filter.replace('\\\\\\\\ ', ' ').replace('\\\\\\\\.', '.').replace('|', ' or '); filter_expr = '(' + clean_filter + ')'; print('Filter for -k:', filter_expr); cmd.extend(['-k', filter_expr, '-v', '--tb=short', '--alluredir=' + allure_dir, '--testit']); else: print('filter.txt not found. Running all tests.'); cmd.extend(['-v', '--tb=short', '--alluredir=' + allure_dir, '--testit']); sys.exit(subprocess.run(cmd).returncode)"
+                        """
                     }
                 }
             }
