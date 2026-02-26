@@ -56,21 +56,51 @@ pipeline {
             }
         }
 
+        stage('Pull Docker image') {
+            steps {
+                script {
+                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
+                        // Принудительно скачиваем свежий образ
+                        sh "docker pull ghcr.io/kellanius/box-for-jenkins:latest"
+                    }
+                }
+            }
+        }
+
+        stage('Check versions in container') {
+            steps {
+                script {
+                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
+                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside {
+                            sh 'echo "=== Test IT versions ==="; pip list | grep testit'
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Filter tests by Test Run ID') {
             when { expression { params.TEST_RUN_ID != '' } }
             steps {
                 script {
-                    bat """
-                        docker run --rm ^
-                          -v "${WORKSPACE}:/workspace" ^
-                          -w /workspace ^
-                          -e TMS_URL=%TMS_URL% ^
-                          -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
-                          -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
-                          -e TEST_RUN_ID=${params.TEST_RUN_ID} ^
-                          ghcr.io/kellanius/box-for-jenkins:latest ^
-                          sh -c "testit autotests_filter --url \\$TMS_URL --token \\$TMS_PRIVATE_TOKEN --configuration-id \\$TMS_CONFIGURATION_ID --testrun-id \\$TEST_RUN_ID --framework playwright --debug --output filter.txt > filter_debug.log 2>&1; cat filter.txt; cat filter_debug.log"
-                    """
+                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
+                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
+                            sh """
+                                testit autotests_filter \\
+                                  --url \$TMS_URL \\
+                                  --token \$TMS_PRIVATE_TOKEN \\
+                                  --configuration-id \$TMS_CONFIGURATION_ID \\
+                                  --testrun-id ${params.TEST_RUN_ID} \\
+                                  --framework playwright \\
+                                  --debug \\
+                                  --output filter.txt > filter_debug.log 2>&1
+                                echo "=== filter.txt ==="
+                                cat filter.txt
+                                echo "=== filter_debug.log ==="
+                                cat filter_debug.log
+                            """
+                        }
+                    }
                 }
             }
         }
@@ -78,20 +108,25 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    bat """
-                        docker run --rm ^
-                          -v "${WORKSPACE}:/workspace" ^
-                          -w /workspace ^
-                          -e TMS_URL=%TMS_URL% ^
-                          -e TMS_PRIVATE_TOKEN=%TMS_PRIVATE_TOKEN% ^
-                          -e TMS_CONFIGURATION_ID=%TMS_CONFIGURATION_ID% ^
-                          -e TMS_ADAPTER_MODE=1 ^
-                          -e TMS_TEST_RUN_ID=${params.TEST_RUN_ID} ^
-                          -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
-                          -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
-                          ghcr.io/kellanius/box-for-jenkins:latest ^
-                          sh -c "if [ -f filter.txt ]; then pytest /workspace/tests -k \"\\\$(cat filter.txt | sed 's/\\\\\\\\ / /g; s/\\\\\\\\././g; s/|/ or /g' | sed 's/.*/(&)/')\" -v --tb=short --alluredir=/workspace/allure-results --testit; else pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit; fi"
-                    """
+                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
+                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
+                            sh """
+                                export PYTHONPATH=/workspace
+                                if [ -f filter.txt ]; then
+                                    FILTER=\$(cat filter.txt)
+                                    FILTER=\${FILTER//\\\\ / }
+                                    FILTER=\${FILTER//\\\\./.}
+                                    FILTER=\${FILTER//|/ or }
+                                    FILTER="(\$FILTER)"
+                                    echo "Filter for -k: \$FILTER"
+                                    pytest /workspace/tests -k "\$FILTER" -v --tb=short --alluredir=/workspace/allure-results --testit
+                                else
+                                    echo "filter.txt not found. Running all tests."
+                                    pytest /workspace/tests -v --tb=short --alluredir=/workspace/allure-results --testit
+                                fi
+                            """
+                        }
+                    }
                 }
             }
         }
