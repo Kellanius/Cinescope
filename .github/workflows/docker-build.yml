@@ -30,7 +30,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}  # ← магия, GitHub сам подставляет токен
+          password: ${{ secrets.GHCR_PAT }}  # ← магия, GitHub сам подставляет токен
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
