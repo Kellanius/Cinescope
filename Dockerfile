@@ -20,6 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
 #    Копируем файл сначала для лучшего кэширования слоев Docker
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade testit-api-client testit-cli testit-adapter-pytest
 
 # 5. Устанавливаем testit-adapter-playwright глобально через npm
 RUN npm install -g testit-adapter-playwright

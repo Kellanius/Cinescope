@@ -13,6 +13,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/box-for-jenkins
 
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
