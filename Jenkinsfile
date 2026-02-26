@@ -64,25 +64,26 @@ pipeline {
         stage('Filter tests by Test Run ID') {
             when { expression { params.TEST_RUN_ID != '' } }
             steps {
-                // ВАЖНО! ЭТОТ ЭТАП ЗАПУСКАЕМ ТОЖЕ В КОНТЕЙНЕРЕ
                 script {
-                    docker.image('kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
-                        bat """
-                            echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
-                            testit autotests_filter ^
-                              --url %TMS_URL% ^
-                              --token %TMS_PRIVATE_TOKEN% ^
-                              --configuration-id %TMS_CONFIGURATION_ID% ^
-                              --testrun-id ${params.TEST_RUN_ID} ^
-                              --framework playwright ^
-                              --debug ^
-                              --output filter.txt > filter_debug.log 2>&1
-                            echo "Команда завершилась с кодом %ERRORLEVEL%"
-                            echo "=== Содержимое filter.txt (фильтр для pytest) ==="
-                            type filter.txt
-                            echo "=== Содержимое filter_debug.log (для отладки) ==="
-                            type filter_debug.log
-                        """
+                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
+                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
+                            bat """
+                                echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
+                                testit autotests_filter ^
+                                  --url %TMS_URL% ^
+                                  --token %TMS_PRIVATE_TOKEN% ^
+                                  --configuration-id %TMS_CONFIGURATION_ID% ^
+                                  --testrun-id ${params.TEST_RUN_ID} ^
+                                  --framework playwright ^
+                                  --debug ^
+                                  --output filter.txt > filter_debug.log 2>&1
+                                echo "Команда завершилась с кодом %ERRORLEVEL%"
+                                echo "=== Содержимое filter.txt (фильтр для pytest) ==="
+                                type filter.txt
+                                echo "=== Содержимое filter_debug.log (для отладки) ==="
+                                type filter_debug.log
+                            """
+                        }
                     }
                 }
             }
@@ -91,35 +92,37 @@ pipeline {
         stage('Run Tests') {
             steps {
                 script {
-                    docker.image('kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
-                        bat """
-                            echo "=== Диагностика переменных Test IT ==="
-                            echo "TMS_ADAPTER_MODE=1"
-                            echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
-                            echo "TMS_URL=%TMS_URL%"
+                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
+                        docker.image('ghcr.io/kellanius/box-for-jenkins:latest').inside("-v ${WORKSPACE}:/workspace -w /workspace") {
+                            bat """
+                                echo "=== Диагностика переменных Test IT ==="
+                                echo "TMS_ADAPTER_MODE=1"
+                                echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
+                                echo "TMS_URL=%TMS_URL%"
 
-                            setlocal enabledelayedexpansion
-                            set PYTHONPATH=%WORKSPACE%
-                            set TMS_ADAPTER_MODE=1
-                            set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
+                                setlocal enabledelayedexpansion
+                                set PYTHONPATH=%WORKSPACE%
+                                set TMS_ADAPTER_MODE=1
+                                set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
 
-                            echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
-                            if exist filter.txt (
-                                for /f "usebackq delims=" %%i in (filter.txt) do set "FILTER=%%i"
-                                set "FILTER=!FILTER:\\ = !"
-                                set "FILTER=!FILTER:\\.=.!"
-                                :: Заменяем разделитель | на or и оборачиваем в скобки
-                                set "FILTER=!FILTER:|= or !"
-                                set "FILTER=(!FILTER!)"
-                                echo "Фильтр для -k: !FILTER!"
-                                python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results --testit
-                            ) else (
-                                echo "Файл filter.txt не найден. Запуск всех тестов."
-                                python -m pytest tests/ -v --tb=short --alluredir=allure-results --testit
-                            )
+                                echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
+                                if exist filter.txt (
+                                    for /f "usebackq delims=" %%i in (filter.txt) do set "FILTER=%%i"
+                                    set "FILTER=!FILTER:\\ = !"
+                                    set "FILTER=!FILTER:\\.=.!"
+                                    :: Заменяем разделитель | на or и оборачиваем в скобки
+                                    set "FILTER=!FILTER:|= or !"
+                                    set "FILTER=(!FILTER!)"
+                                    echo "Фильтр для -k: !FILTER!"
+                                    python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results --testit
+                                ) else (
+                                    echo "Файл filter.txt не найден. Запуск всех тестов."
+                                    python -m pytest tests/ -v --tb=short --alluredir=allure-results --testit
+                                )
 
-                            echo "=== Завершено. Код возврата: %ERRORLEVEL% ==="
-                        """
+                                echo "=== Завершено. Код возврата: %ERRORLEVEL% ==="
+                            """
+                        }
                     }
                 }
             }
