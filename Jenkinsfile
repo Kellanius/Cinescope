@@ -7,12 +7,18 @@ pipeline {
     }
 
     environment {
+        PYTHON = "C:\\python312\\python.exe"
+        PROJECT_ROOT = "%WORKSPACE%"
+        VENV = "%WORKSPACE%\\venv"
+        // Переменные для Test IT (подставляются из credentials)
         TMS_URL = credentials('testit-url')
         TMS_PRIVATE_TOKEN = credentials('testit-token')
         TMS_PROJECT_ID = credentials('testit-project-id')
         TMS_CONFIGURATION_ID = credentials('testit-config-id')
         SUPER_ADMIN_USERNAME = credentials('super-admin-email')
         SUPER_ADMIN_PASSWORD = credentials('super-admin-password')
+        // Путь к файлу фильтра (больше не используется, но оставлен на всякий случай)
+        FILTER_FILE = "%WORKSPACE%\\testit-filter.txt"
     }
 
     stages {
@@ -20,7 +26,7 @@ pipeline {
             steps {
                 echo 'Клонируем репозиторий...'
                 git branch: 'main',
-                    url: 'https://github.com/kellanius/Cinescope.git',
+                    url: 'https://github.com/Kellanius/Cinescope.git',
                     credentialsId: 'github-token'
             }
         }
@@ -40,7 +46,7 @@ pipeline {
                             echo   "privateToken": "${TOKEN}", >> tms.config.json
                             echo   "projectId": "${PROJECT_ID}", >> tms.config.json
                             echo   "configurationId": "${CONFIG_ID}", >> tms.config.json
-                            echo   "adapterMode": 1 >> tms.config.json
+                            echo   "adapterMode": 0 >> tms.config.json
                             echo } >> tms.config.json
                         """
                         echo "✅ Файл tms.config.json успешно создан"
@@ -50,86 +56,136 @@ pipeline {
             }
         }
 
+        stage('Setup VirtualEnv') {
+            steps {
+                echo '🔧 Создаём виртуальное окружение...'
+                bat """
+                    echo "=== Текущий PATH ==="
+                    echo %PATH%
+                    echo "=== Проверка Node.js ==="
+                    where node
+
+                    "%PYTHON%" -m venv venv
+                    call venv\\Scripts\\activate.bat
+                    python -m pip install --upgrade pip
+
+                    :: Удаляем старую заглушку testit.py, если она есть
+                    if exist testit.py del testit.py
+
+                    echo "=== Удаление старых версий testit-пакетов ==="
+                    pip uninstall testit-adapter-pytest testit-python-commons testit-api-client -y
+
+                    echo "=== Установка совместимых версий для Test IT 5.6 ==="
+                    pip install testit-api-client || exit /b 1
+                    pip install testit-python-commons || exit /b 1
+                    pip install testit-adapter-pytest || exit /b 1
+
+                    echo "=== Установка остальных зависимостей ==="
+                    pip install -r requirements.txt
+                    pip install allure-pytest playwright faker
+                    playwright install
+
+                    echo "=== Установка testit-cli (если ещё нет) ==="
+                    pip install testit-cli || exit /b 1
+
+                    echo "=== Установка testit-adapter-playwright через npm ==="
+                    where node || (echo Node.js not found && exit /b 1)
+                    npm install -g testit-adapter-playwright
+
+                    echo "=== Переустановка greenlet для устранения проблем с импортом ==="
+                    pip uninstall greenlet -y
+                    pip install greenlet==3.3.2 --force-reinstall --no-cache-dir
+                    python -c "import greenlet; print('✅ greenlet imported successfully')" || (echo "❌ Ошибка импорта greenlet" && exit 1)
+
+                    echo "=== Переустановка pydantic и pydantic-core ==="
+                    pip uninstall pydantic pydantic-core -y
+                    pip install pydantic==2.12.5 --force-reinstall --no-cache-dir
+                    pip install pydantic-core==2.41.5 --force-reinstall --no-cache-dir
+                    python -c "from pydantic_core import __version__; print('✅ pydantic-core imported successfully')" || (echo "❌ Ошибка импорта pydantic-core" && exit 1)
+
+                    echo "=== Проверка установленных версий ==="
+                    pip show testit-api-client testit-python-commons testit-adapter-pytest testit-cli
+                """
+            }
+        }
+
         stage('Clear pytest cache') {
             steps {
                 bat 'if exist .pytest_cache rmdir /s /q .pytest_cache'
             }
         }
 
-        stage('Pull Docker image') {
-            steps {
-                script {
-                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        bat "docker pull ghcr.io/kellanius/box-for-jenkins:latest"
-                    }
-                }
-            }
-        }
-
-        // ЭТАП ПРОВЕРКИ ИМПОРТОВ (исправлен, без лишних steps)
-        stage('Check imports') {
-            steps {
-                script {
-                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        bat 'docker run --rm -w /workspace ghcr.io/kellanius/box-for-jenkins:latest sh -c "python -c \'import greenlet, pydantic_core, allure, playwright.sync_api; print(\\"greenlet:\\", greenlet.__version__); print(\\"pydantic_core:\\", pydantic_core.__version__); print(\\"allure imported successfully\\"); print(\\"playwright.sync_api imported successfully\\"); print(\\"All imports successful\\")\'"'
-                    }
-                }
-            }
-        }
-
         stage('Filter tests by Test Run ID') {
             when { expression { params.TEST_RUN_ID != '' } }
             steps {
-                script {
-                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        bat """
-                            docker run --rm -v %WORKSPACE%:/workspace -w /workspace ^
-                              ghcr.io/kellanius/box-for-jenkins:latest ^
-                              testit autotests_filter ^
-                                --url %TMS_URL% ^
-                                --token %TMS_PRIVATE_TOKEN% ^
-                                --configuration-id %TMS_CONFIGURATION_ID% ^
-                                --testrun-id ${params.TEST_RUN_ID} ^
-                                --framework playwright ^
-                                --debug ^
-                                --output filter.txt > filter_debug.log 2>&1
-                            type filter.txt
-                            type filter_debug.log
-                        """
-                    }
-                }
+                bat """
+                    call venv\\Scripts\\activate.bat
+                    echo "=== Получение списка тестов для прогона ${params.TEST_RUN_ID} ==="
+                    testit autotests_filter ^
+                      --url %TMS_URL% ^
+                      --token %TMS_PRIVATE_TOKEN% ^
+                      --configuration-id %TMS_CONFIGURATION_ID% ^
+                      --testrun-id ${params.TEST_RUN_ID} ^
+                      --framework playwright ^
+                      --debug ^
+                      --output filter.txt > filter_debug.log 2>&1
+                    echo "Команда завершилась с кодом %ERRORLEVEL%"
+                    echo "=== Содержимое filter.txt (фильтр для pytest) ==="
+                    type filter.txt
+                    echo "=== Содержимое filter_debug.log (для отладки) ==="
+                    type filter_debug.log
+                """
             }
         }
 
         stage('Run Tests') {
             steps {
-                script {
-                    docker.withRegistry('https://ghcr.io', 'github-token-for-docker') {
-                        bat """
-                            docker run --rm -v %WORKSPACE%:/workspace -w /workspace ^
-                              -e TMS_ADAPTER_MODE=1 ^
-                              -e TMS_TEST_RUN_ID=${params.TEST_RUN_ID} ^
-                              -e SUPER_ADMIN_USERNAME=%SUPER_ADMIN_USERNAME% ^
-                              -e SUPER_ADMIN_PASSWORD=%SUPER_ADMIN_PASSWORD% ^
-                              ghcr.io/kellanius/box-for-jenkins:latest ^
-                              python -c "import os,subprocess,sys;f='/workspace/filter.txt';t='/workspace/tests';a='/workspace/allure-results';c=[sys.executable,'-m','pytest',t];r='';p=print;e=os.path.exists(f);exec('if e:\\n  with open(f) as x: r=x.read().strip()\\n  r=r.replace(\\'\\\\\\\\ \\',\\' \\').replace(\\'\\\\\\\\.\\',\\'.\\').replace(\\'|\\',\\' or \\')\\n  p(\\'Filter for -k: (\\'+r+\\')\\')\\n  c.extend([\\'-k\\',\\'(\\'+r+\\')\\",\\'-v\\',\\'--tb=short\\',\\'--alluredir=\\'+a,\\'--testit\\'])\\nelse:\\n  p(\\'filter.txt not found. Running all tests.\\')\\n  c.extend([\\'-v\\',\\'--tb=short\\',\\'--alluredir=\\'+a,\\'--testit\\'])');sys.exit(subprocess.run(c).returncode)"
-                        """
-                    }
-                }
+                bat """
+                    call venv\\Scripts\\activate.bat
+                    echo "=== Диагностика переменных Test IT ==="
+                    echo "TMS_ADAPTER_MODE=1"
+                    echo "TMS_TEST_RUN_ID=${params.TEST_RUN_ID}"
+                    echo "TMS_URL=%TMS_URL%"
+
+                    setlocal enabledelayedexpansion
+                    set PYTHONPATH=%WORKSPACE%
+                    set TMS_ADAPTER_MODE=1
+                    set TMS_TEST_RUN_ID=${params.TEST_RUN_ID}
+
+                    echo "=== Запуск тестов, соответствующих фильтру (adapterMode=1) ==="
+                    if exist filter.txt (
+                        for /f "usebackq delims=" %%i in (filter.txt) do set "FILTER=%%i"
+                        set "FILTER=!FILTER:\\ = !"
+                        set "FILTER=!FILTER:\\.=.!"
+                        :: Заменяем разделитель | на or и оборачиваем в скобки
+                        set "FILTER=!FILTER:|= or !"
+                        set "FILTER=(!FILTER!)"
+                        echo "Фильтр для -k: !FILTER!"
+                        python -m pytest tests/ -k "!FILTER!" -v --tb=short --alluredir=allure-results --testit
+                    ) else (
+                        echo "Файл filter.txt не найден. Запуск всех тестов."
+                        python -m pytest tests/ -v --tb=short --alluredir=allure-results --testit
+                    )
+
+                    echo "=== Завершено. Код возврата: %ERRORLEVEL% ==="
+                """
             }
         }
-    } // stages
+
+    } // закрываем stages
 
     post {
         success {
             script {
+                // Если передан ID прогона и сборка успешна, завершаем прогон в Test IT как Completed
+                // Это особенно важно для rerun, когда прогон уже существовал и адаптер не завершил его автоматически.
                 if (params.TEST_RUN_ID) {
                     echo "Сборка успешна. Завершаем прогон ${params.TEST_RUN_ID} в Test IT как Completed."
                     withCredentials([string(credentialsId: 'testit-token', variable: 'TOKEN')]) {
                         bat """
-                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" ^
-                              -H "Authorization: PrivateToken ${TOKEN}" ^
-                              -H "Content-Type: application/json" ^
+                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" \
+                              -H "Authorization: PrivateToken ${TOKEN}" \
+                              -H "Content-Type: application/json" \
                               -d "{\\"status\\": \\"Completed\\", \\"message\\": \\"Pipeline succeeded.\\"}"
                         """
                     }
@@ -138,13 +194,14 @@ pipeline {
         }
         failure {
             script {
+                // Если передан ID прогона и сборка упала, завершаем прогон в Test IT со статусом Failed
                 if (params.TEST_RUN_ID) {
                     echo "Пайплайн упал. Завершаем прогон ${params.TEST_RUN_ID} в Test IT как Failed"
                     withCredentials([string(credentialsId: 'testit-token', variable: 'TOKEN')]) {
                         bat """
-                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" ^
-                              -H "Authorization: PrivateToken ${TOKEN}" ^
-                              -H "Content-Type: application/json" ^
+                            curl -X POST "${TMS_URL}/api/v2/testRuns/${params.TEST_RUN_ID}/complete" \
+                              -H "Authorization: PrivateToken ${TOKEN}" \
+                              -H "Content-Type: application/json" \
                               -d "{\\"status\\": \\"Failed\\", \\"message\\": \\"Pipeline failed. Check Jenkins logs for details. Build: ${env.BUILD_URL}\\"}"
                         """
                     }
@@ -155,4 +212,5 @@ pipeline {
             echo '🏁 Сборка завершена.'
         }
     }
+
 }
