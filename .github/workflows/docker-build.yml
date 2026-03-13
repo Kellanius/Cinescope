@@ -1,0 +1,40 @@
+name: Build and Push Docker image
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'Dockerfile'
+      - 'requirements.txt'
+      - '.github/workflows/docker-build.yml'
+  workflow_dispatch:  # ручной запуск
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: kellanius/box-for-jenkins
+
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}  # ← магия, GitHub сам подставляет токен
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

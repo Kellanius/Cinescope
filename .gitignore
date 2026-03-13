@@ -4,6 +4,7 @@ logs/
 /temp/
 ?ogo.png
 /build/logs/
+connection_config.ini
 
 # Игнорировать все .pyc файлы
 *.pyc

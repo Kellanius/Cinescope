@@ -1,3 +1,10 @@
+import sys
+from pathlib import Path
+
+_root = Path(__file__).resolve().parent
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+
 import os
 
 import requests
@@ -9,12 +16,10 @@ from utils.movie_helpers import MovieHelper
 from resources.user_creds import SuperAdminCreds
 from entities.user import User
 from constants import Roles
-from sqlalchemy.orm import Session
-from db_requester.db_client import get_db_session
-from db_requester.db_helpers import DBHelper
 import pytest
 import time
 from playwright_helpers.page_object import CinescopeLoginPage, CinescopeMoviePage
+import testit
 
 
 
@@ -22,7 +27,7 @@ from playwright_helpers.page_object import CinescopeLoginPage, CinescopeMoviePag
 #os.environ["PWDEBUG"] = "0"
 faker = Faker()
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def test_user_factory():
     """
     Фикстура-фабрика генерации пользовательских данных для регистрации (с дабл паролем)"
@@ -34,7 +39,7 @@ def test_user_factory():
     return create
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def creation_test_user(test_user_factory):
     """
     Готовые данные для регистрации пользователя, созданные через фабрику
@@ -258,7 +263,9 @@ def creation_user_by_role(request, creation_user_factory):
 
 # Фикстура для создания сессии БД
 @pytest.fixture(scope="module")
-def db_session() -> Session:
+def db_session():
+    from sqlalchemy.orm import Session
+    from db_requester.db_client import get_db_session
     """
     Фикстура, которая создает и возвращает сессию для работы с базой данных
     После завершения теста сессия автоматически закрывается
@@ -269,10 +276,11 @@ def db_session() -> Session:
 
 
 @pytest.fixture(scope="function")
-def db_helper(db_session) -> DBHelper:
+def db_helper(db_session):
     """
     Фикстура для экземпляра хелпера
     """
+    from db_requester.db_helpers import DBHelper
     db_helper = DBHelper(db_session)
     return db_helper
 
@@ -328,8 +336,9 @@ def context(browser):
 
 
 @pytest.fixture(scope="function")
-def page(context):
+def page(context, request):
     page = context.new_page()
+    request.node._last_page = page
     yield page
     page.close()
 
@@ -381,8 +390,25 @@ def auth_context(browser, registered_user):
 
 
 @pytest.fixture(scope="function")
-def auth_page(auth_context):
+def auth_page(auth_context, request):
     """Страница с уже авторизованным пользователем"""
     a_page = auth_context.new_page()
+    request.node._last_page = a_page
     yield a_page
     a_page.close()
+
+
+# Хук для скриншотов при падении
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+
+    if report.when == 'call' and report.failed:
+        page = getattr(item, '_last_page', None)
+        if page and hasattr(page, 'screenshot') and callable(page.screenshot):
+            try:
+                screenshot_bytes = page.screenshot()
+                testit.addAttachments(screenshot_bytes, "screenshot.png")
+            except Exception as e:
+                print(f"Не удалось сделать скриншот: {e}")

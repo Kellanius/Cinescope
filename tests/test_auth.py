@@ -8,11 +8,15 @@ from dataclasses import dataclass
 from typing import List
 import allure
 from pytest_check import check
+import testit
 
 @allure.epic("Тестирование авторизации")
 @allure.feature("Позитивные проверки")
 class TestAuthAPI:
 
+    @testit.workItemIds(50)
+    @testit.externalId("50_auto")
+    @testit.displayName("Тест на регистрацию пользователя через API")
     @allure.description("""
         Тест проверяет регистрацию пользователя через api
         """)
